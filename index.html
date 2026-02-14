@@ -517,7 +517,8 @@
 
                                     <div>
                                         <label class="text-xs font-bold text-gray-500 uppercase ml-1">Data</label>
-                                        <input type="date" id="input-date" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-green-500" required>
+                                        <!-- ADICIONADO onchange="autoFillMeta()" para recalcular ao mudar a data -->
+                                        <input type="date" id="input-date" onchange="autoFillMeta()" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-green-500" required>
                                     </div>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
@@ -1002,12 +1003,33 @@
             });
         };
 
-        // --- CORREÇÃO 1: FUNÇÃO QUE FALTAVA ---
+        // --- CORREÇÃO 1: FUNÇÃO QUE FALTAVA (AGORA COM REGRA DE SÁBADO) ---
         window.autoFillMeta = () => {
             const mat = document.getElementById('input-matricula').value;
+            const dateVal = document.getElementById('input-date').value;
+            
+            // Só tenta buscar se tiver matrícula
+            if (!mat) return;
+
             const user = allCollaborators.find(c => c.matricula === mat);
+            
             if(user && user.meta) {
-                document.getElementById('input-meta').value = user.meta.toString().replace('.', ',');
+                let currentMeta = user.meta;
+
+                // LÓGICA DE SÁBADO (METADE DA META)
+                if (dateVal) {
+                    // Cria data garantindo fuso horário correto (adiciona T00:00:00 para evitar cair no dia anterior)
+                    const d = new Date(dateVal + 'T00:00:00');
+                    const dayOfWeek = d.getDay(); // 0 = Domingo, 6 = Sábado
+                    
+                    if (dayOfWeek === 6) {
+                        currentMeta = currentMeta / 2;
+                        // Opcional: Mostrar um toast rápido ou mudar cor para indicar a regra aplicada? 
+                        // Por enquanto, apenas muda o valor silenciosamente.
+                    }
+                }
+
+                document.getElementById('input-meta').value = formatNumber(currentMeta);
             } else {
                 document.getElementById('input-meta').value = '';
             }
@@ -1718,7 +1740,21 @@
                 const userObj = allUsersCache.find(u => u.matricula === matricula);
                 
                 if (userObj) {
-                    finalMeta = (inputMetaRaw && inputMetaRaw !== "") ? parsePtBrNumber(inputMetaRaw) : (userObj.meta || 0);
+                    // LÓGICA DE META: Se o campo estiver preenchido, usa ele.
+                    // Se estiver VAZIO, calcula automaticamente (incluindo regra de sábado)
+                    if (inputMetaRaw && inputMetaRaw !== "") {
+                         finalMeta = parsePtBrNumber(inputMetaRaw);
+                    } else {
+                         finalMeta = userObj.meta || 0;
+                         // Aplica regra de sábado no backend também (caso o front falhe ou campo venha vazio)
+                         if (d) {
+                             const dateObj = new Date(d + 'T00:00:00');
+                             if (dateObj.getDay() === 6) { // Sábado
+                                 finalMeta = finalMeta / 2;
+                             }
+                         }
+                    }
+
                     // O pulo do gato: Salva com o setor ATUAL do cadastro do usuário
                     userSetor = userObj.setor || 'Expedição';
                 }
