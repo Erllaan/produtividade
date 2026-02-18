@@ -579,7 +579,7 @@
                         <div id="ranking-card" class="bg-white rounded-2xl shadow-sm border border-blue-100 p-6 h-fit relative">
                             <div class="flex flex-col gap-2 mb-4 border-b pb-4">
                                 <div class="flex items-center justify-between">
-                                    <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+                                    <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2" id="ranking-title">
                                         <i class="fas fa-trophy text-yellow-500"></i> Ranking
                                         <button onclick="copyRanking()" class="text-gray-400 hover:text-blue-500 text-sm ml-2 p-1 rounded-full hover:bg-gray-100 transition" title="Copiar como Imagem">
                                             <i class="far fa-copy"></i>
@@ -592,6 +592,12 @@
                                             <i class="fas fa-sync-alt text-xs"></i>
                                         </button>
                                     </div>
+                                </div>
+                                <!-- NOVO: Toggle de Período (Dia/Semana/Mês) -->
+                                <div class="flex bg-gray-100 p-1 rounded-lg">
+                                    <button onclick="setRankingPeriod('day')" id="btn-period-day" class="flex-1 py-1 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition">Dia</button>
+                                    <button onclick="setRankingPeriod('week')" id="btn-period-week" class="flex-1 py-1 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition">Semana</button>
+                                    <button onclick="setRankingPeriod('month')" id="btn-period-month" class="flex-1 py-1 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition">Mês</button>
                                 </div>
                                 <!-- Toggle de Modo -->
                                 <div class="flex bg-gray-100 p-1 rounded-lg">
@@ -884,6 +890,7 @@
         let reportUsersCache = []; 
         
         let rankingMode = 'absolute'; 
+        let rankingPeriod = 'day'; // 'day', 'week', 'month'
         window.currentRankingData = []; 
 
         function getLocalToday() {
@@ -892,6 +899,31 @@
             const m = String(d.getMonth() + 1).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
             return `${y}-${m}-${day}`;
+        }
+        
+        // --- HELPER FUNCTIONS FOR DATES ---
+        function getWeekRange(dateString) {
+            const date = new Date(dateString + 'T00:00:00');
+            const day = date.getDay(); // 0 (Sun) to 6 (Sat)
+            const diffToMonday = date.getDate() - day + (day === 0 ? -6 : 1); 
+            const monday = new Date(date.setDate(diffToMonday));
+            const sunday = new Date(date.setDate(monday.getDate() + 6));
+            
+            const fmt = (d) => d.toISOString().split('T')[0];
+            return { start: fmt(monday), end: fmt(sunday) };
+        }
+
+        function getMonthRange(dateString) {
+            const [y, m, d] = dateString.split('-');
+            const first = new Date(y, m - 1, 1);
+            const last = new Date(y, m, 0);
+            const fmt = (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            return { start: fmt(first), end: fmt(last) };
         }
 
         function parsePtBrNumber(val) {
@@ -2565,20 +2597,72 @@
             updateDailyRanking(); 
         };
 
+        window.setRankingPeriod = (period) => {
+            rankingPeriod = period;
+            
+            const btnDay = document.getElementById('btn-period-day');
+            const btnWeek = document.getElementById('btn-period-week');
+            const btnMonth = document.getElementById('btn-period-month');
+            
+            // Reset styles
+            [btnDay, btnWeek, btnMonth].forEach(btn => {
+                btn.className = "flex-1 py-1 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition";
+            });
+            
+            // Set active style
+            const activeBtn = period === 'day' ? btnDay : (period === 'week' ? btnWeek : btnMonth);
+            activeBtn.className = "flex-1 py-1 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition";
+            
+            updateDailyRanking();
+        };
+
         window.updateDailyRanking = async () => {
             const dateInput = document.getElementById('ranking-date');
             const selectedDate = dateInput.value || getLocalToday();
             const listEl = document.getElementById('ranking-list');
+            const titleEl = document.getElementById('ranking-title');
 
             listEl.innerHTML = '<p class="text-center text-gray-400 text-sm py-4"><i class="fas fa-spinner fa-spin"></i> Carregando...</p>';
 
             try {
-                const q = query(collection(db, "productivity"), where("date", "==", selectedDate));
-                const snap = await getDocs(q);
-                
-                const dailyData = [];
+                let q;
                 const mySetor = currentUserData.setor || 'Expedição';
                 
+                // DATA RANGE LOGIC
+                let start, end, rangeLabel;
+                
+                if (rankingPeriod === 'day') {
+                    start = selectedDate;
+                    end = selectedDate;
+                    rangeLabel = "do Dia";
+                } else if (rankingPeriod === 'week') {
+                    const range = getWeekRange(selectedDate);
+                    start = range.start;
+                    end = range.end;
+                    const fmt = (d) => d.split('-').reverse().slice(0,2).join('/');
+                    rangeLabel = `Semanal (${fmt(start)} a ${fmt(end)})`;
+                } else {
+                    const range = getMonthRange(selectedDate);
+                    start = range.start;
+                    end = range.end;
+                    const [y, m] = selectedDate.split('-');
+                    rangeLabel = `Mensal (${m}/${y})`;
+                }
+                
+                // Atualiza título do card
+                titleEl.innerHTML = `<i class="fas fa-trophy text-yellow-500"></i> Ranking ${rangeLabel} 
+                                    <button onclick="copyRanking()" class="text-gray-400 hover:text-blue-500 text-sm ml-2 p-1 rounded-full hover:bg-gray-100 transition" title="Copiar como Imagem"><i class="far fa-copy"></i></button>`;
+
+                // QUERY FIRESTORE
+                if (start === end) {
+                    q = query(collection(db, "productivity"), where("date", "==", start));
+                } else {
+                    q = query(collection(db, "productivity"), where("date", ">=", start), where("date", "<=", end));
+                }
+
+                const snap = await getDocs(q);
+                
+                const rawData = [];
                 snap.forEach(doc => {
                     const data = doc.data();
                     let uSetor = data.setor;
@@ -2587,28 +2671,44 @@
                          uSetor = userObj ? (userObj.setor || 'Expedição') : 'Expedição';
                     }
                     if (!currentUserData.isMaster && uSetor !== mySetor) return;
-                    
-                    dailyData.push(data);
+                    rawData.push(data);
                 });
-                
-                if(dailyData.length === 0) {
-                    listEl.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Sem dados para esta data.</p>';
+
+                if(rawData.length === 0) {
+                    listEl.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Sem dados para este período.</p>';
                     window.currentRankingData = []; 
                     return;
                 }
 
-                dailyData.forEach(item => {
+                // AGGREGATION LOGIC (For Week/Month)
+                const aggMap = {};
+                
+                rawData.forEach(item => {
+                    if (!aggMap[item.matricula]) {
+                        aggMap[item.matricula] = {
+                            matricula: item.matricula,
+                            score: 0,
+                            meta: 0,
+                            setor: item.setor
+                        };
+                    }
+                    aggMap[item.matricula].score += item.score;
+                    aggMap[item.matricula].meta += (item.meta || 0);
+                });
+                
+                const aggregatedData = Object.values(aggMap);
+
+                aggregatedData.forEach(item => {
                     item.percent = (item.meta && item.meta > 0) ? (item.score / item.meta) : 0;
                 });
 
                 if (rankingMode === 'absolute') {
-                    dailyData.sort((a, b) => b.score - a.score);
+                    aggregatedData.sort((a, b) => b.score - a.score);
                 } else {
-                    dailyData.sort((a, b) => b.percent - a.percent);
+                    aggregatedData.sort((a, b) => b.percent - a.percent);
                 }
 
-                window.currentRankingData = dailyData.map(item => {
-                    // Resolve nome para ranking
+                window.currentRankingData = aggregatedData.map(item => {
                     const name = resolveName(item.matricula).split(' ')[0];
                     return {
                         name: name,
@@ -2619,7 +2719,7 @@
                 });
 
                 let html = '';
-                dailyData.forEach((item, index) => {
+                aggregatedData.forEach((item, index) => {
                     const name = resolveName(item.matricula).split(' ')[0];
                     const setorBadge = currentUserData.isMaster && item.setor ? ` <span class="text-[9px] text-gray-400 uppercase">(${item.setor})</span>` : '';
                     const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index+1}`;
@@ -2674,6 +2774,11 @@
                 const dateVal = document.getElementById('ranking-date').value.split('-').reverse().join('/');
                 const modeText = rankingMode === 'absolute' ? "Volume de Produção" : "Performance (%)";
                 
+                // PEGA O LABEL DO PERIODO
+                let periodLabel = "Do Dia";
+                if(rankingPeriod === 'week') periodLabel = "Semanal";
+                if(rankingPeriod === 'month') periodLabel = "Mensal";
+
                 if (!data || data.length === 0) {
                      showToast("Ranking vazio.", true);
                      btn.innerHTML = oldIcon;
@@ -2735,8 +2840,8 @@
                         <div style="width: 60px; height: 60px; background-color: #2563EB; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="32px" height="32px"><path d="M5 2H2V6C2 8.20914 3.79086 10 6 10H7V12C7 14.2091 8.79086 16 11 16H13C15.2091 16 17 14.2091 17 12V10H18C20.2091 10 22 8.20914 22 6V2H19V6C19 6.55228 18.5523 7 18 7H17V2H15V10H9V2H7V7H6C5.44772 7 5 6.55228 5 6V2ZM12 18C9.5 18 8 19 8 20V22H16V20C16 19 14.5 18 12 18Z"></path></svg>
                         </div>
-                        <h2 style="font-size: 1.8rem; font-weight: 800; color: #111827; margin: 0;">Ranking do Dia</h2>
-                        <p style="font-size: 1rem; color: #6B7280; margin: 5px 0 0 0;">${dateVal} • ${modeText}</p>
+                        <h2 style="font-size: 1.8rem; font-weight: 800; color: #111827; margin: 0;">Ranking ${periodLabel}</h2>
+                        <p style="font-size: 1rem; color: #6B7280; margin: 5px 0 0 0;">Base: ${dateVal} • ${modeText}</p>
                     </div>
                     <div style="background-color: #f9fafb; border-radius: 12px; padding: 10px 20px;">
                         ${listHtml}
