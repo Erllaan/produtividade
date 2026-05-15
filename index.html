@@ -21,7 +21,7 @@
         .fa-spinner { animation: spin 1s infinite linear; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
-        .tab-btn { transition: all 0.3s; border-bottom: 2px solid transparent; color: #6B7280; }
+        .tab-btn { transition: all 0.3s; border-bottom: 2px solid transparent; color: #6B7280; white-space: nowrap; flex-shrink: 0; }
         .tab-btn:hover { color: #2563EB; background-color: #EFF6FF; }
         .tab-btn.active { color: #2563EB; border-bottom-color: #2563EB; background-color: #EFF6FF; }
 
@@ -34,12 +34,43 @@
         .exec-card { transition: all 0.2s ease; cursor: pointer; }
         .exec-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border-color: #c7d2fe; }
 
-        /* Tooltip customizada para painel executivo */
-        .exec-tooltip .tooltip-text { visibility: hidden; opacity: 0; transition: opacity 0.3s; }
-        .exec-tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+        /* Tooltip customizada para painel executivo com animação suave */
+        .exec-tooltip .tooltip-text { 
+            visibility: hidden; 
+            opacity: 0; 
+            transition: all 0.2s ease-in-out;
+            transform: translateX(-50%) translateY(5px);
+        }
+        .exec-tooltip:hover .tooltip-text { 
+            visibility: visible; 
+            opacity: 1; 
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        /* Ajuste específico para o último card não vazar na tela */
+        .tooltip-right .tooltip-text {
+            transform: translateX(0) translateY(5px);
+            right: -10px;
+            left: auto;
+        }
+        .exec-tooltip.tooltip-right:hover .tooltip-text {
+            transform: translateX(0) translateY(0);
+        }
     </style>
 </head>
 <body class="text-gray-800 antialiased h-screen flex flex-col">
+
+    <!-- Datalist para Setores Dinâmicos (ainda usado em ocorrências e outros locais simples) -->
+    <datalist id="datalist-setores"></datalist>
+
+    <datalist id="datalist-filiais">
+        <option value="CHECKOUT">
+        <option value="PERFUMARIA">
+        <option value="MEDICAMENTOS">
+        <option value="SEGREGADOS 1">
+        <option value="SEGREGADOS 2">
+        <option value="REVERSA">
+    </datalist>
 
     <!-- Tela de Login -->
     <section id="login-screen" class="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-100">
@@ -77,6 +108,7 @@
         </div>
     </section>
 
+    <!-- Modais (Ocultos por padrão) -->
     <div id="edit-user-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-fade-in">
             <div class="flex justify-between items-center mb-4">
@@ -98,11 +130,23 @@
                     <label class="text-xs font-bold text-gray-500 uppercase ml-1">Tipo de Conta</label>
                     <select id="edit-role" class="w-full border p-3 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"><option value="colaborador">Colaborador</option><option value="admin">Gestor</option></select>
                 </div>
-                <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Filial / Loja</label><input type="text" id="edit-filial" class="w-full border p-3 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Padrão"></div>
+                <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Filial / Loja</label><input type="text" id="edit-filial" list="datalist-filiais" class="w-full border p-3 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500" placeholder="Selecione ou digite"></div>
+                
+                <!-- DROPDOWN CUSTOMIZADO DE EDIÇÃO DE SETOR -->
                 <div>
-                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Setor</label>
-                    <select id="edit-setor" class="w-full border p-3 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></select>
+                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Setor(es)</label>
+                    <div class="relative">
+                        <div id="setor-display-edit" class="w-full border p-3 rounded-lg bg-gray-50 outline-none cursor-pointer flex flex-wrap gap-1 items-center transition focus-within:ring-2 focus-within:ring-blue-500 min-h-[46px]" onclick="toggleMultiSelect('setor-dropdown-edit')">
+                            <span class="text-gray-400 text-sm">Selecione os setores...</span>
+                        </div>
+                        <div id="setor-dropdown-edit" class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl hidden max-h-48 overflow-y-auto">
+                            <!-- Injetado via JS -->
+                        </div>
+                        <input type="hidden" id="edit-setor" required>
+                    </div>
+                    <p class="text-[9px] text-gray-400 mt-0.5 pl-1">Múltipla escolha habilitada</p>
                 </div>
+
                 <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Meta Padrão</label><input type="text" id="edit-meta" class="w-full border p-3 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 10.000"></div>
             </div>
             <div class="flex flex-col gap-2 mt-6"><button onclick="saveEditUser()" class="w-full py-3 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">Salvar Alterações</button></div>
@@ -135,8 +179,7 @@
                 <div><label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Valor / Qtd</label><input type="text" id="edit-error-value" class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-red-500" placeholder="Ex: 50,00"></div>
                 <div>
                     <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Setor</label>
-                    <select id="edit-error-sector" class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-red-500 bg-white">
-                    </select>
+                    <input type="text" id="edit-error-sector" list="datalist-setores" class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-red-500 bg-white" placeholder="Selecione ou digite">
                 </div>
                 <div class="md:col-span-2"><label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Observações</label><textarea id="edit-error-desc" rows="3" class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-red-500"></textarea></div>
             </div>
@@ -199,6 +242,7 @@
         </div>
     </div>
 
+    <!-- Modal Drilldown Executivo -->
     <div id="exec-drilldown-modal" class="fixed inset-0 bg-black/70 hidden flex flex-col items-center justify-center p-4 z-[70] backdrop-blur-sm">
         <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] shadow-2xl animate-fade-in flex flex-col">
             <div class="flex justify-between items-center p-6 border-b">
@@ -210,7 +254,9 @@
             <div class="p-6 bg-indigo-50/30 border-b flex justify-between items-center text-sm" id="exec-drilldown-summary">
                 <span class="text-gray-600 font-medium">Analisando dados consolidados do período selecionado.</span>
             </div>
-            <div class="flex-1 overflow-y-auto p-6 scrollbar-thin bg-gray-50" id="exec-drilldown-content">
+            <div class="flex-1 overflow-x-auto p-0 scrollbar-thin bg-gray-50 w-full">
+                <!-- Wrapper interno para margem e tabelas sem quebra -->
+                <div class="min-w-[600px] p-6" id="exec-drilldown-content"></div>
             </div>
         </div>
     </div>
@@ -230,6 +276,7 @@
         </div>
     </div>
 
+    <!-- Modal Preview Relatórios -->
     <div id="preview-report-modal" class="fixed inset-0 bg-white hidden flex flex-col z-50 animate-fade-in overflow-hidden">
         <div class="bg-white border-b px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm z-10 gap-4">
             <div class="flex-1"><h3 class="font-bold text-xl text-gray-800 flex items-center gap-2"><i class="fas fa-chart-pie text-purple-600"></i> Relatório Analítico</h3><p class="text-xs text-gray-500" id="preview-period-text">Período: --/--/---- a --/--/----</p></div>
@@ -237,21 +284,23 @@
             <div class="flex gap-3 w-full md:w-auto"><button onclick="closePreviewReport()" class="px-4 py-2 text-gray-500 hover:text-gray-700 font-bold text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition w-full md:w-auto">Fechar</button><button onclick="generatePDF(true)" class="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-lg shadow-lg shadow-purple-200 transition flex items-center justify-center gap-2 w-full md:w-auto"><i class="fas fa-download"></i> <span class="hidden md:inline">Baixar PDF</span></button></div>
         </div>
         <div id="feedback-controls" class="bg-blue-50/50 border-b border-blue-100 px-6 py-3 flex flex-wrap items-center gap-4 hidden"><div class="flex items-center gap-2"><i class="fas fa-comment-dots text-blue-500"></i><span class="text-xs font-bold text-blue-800 uppercase">Modo Filtro:</span></div><div class="flex items-center gap-2"><label class="text-sm text-gray-600">Destacar Colaborador:</label><select id="preview-focus-user" onchange="updateReportView()" class="border border-gray-300 rounded text-sm p-1.5 outline-none focus:ring-2 focus:ring-blue-500 bg-white"><option value="">Nenhum (Visão Geral)</option></select></div><div class="flex items-center gap-2 border-l border-blue-200 pl-4 ml-2"><input type="checkbox" id="preview-hide-names" onchange="updateReportView()" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"><label for="preview-hide-names" class="text-sm text-gray-700 cursor-pointer select-none">Ocultar nomes dos outros (Privacidade)</label></div></div>
-        <div class="flex-1 overflow-y-auto bg-gray-50 p-6 scrollbar-thin"><div class="max-w-6xl mx-auto space-y-6"><div class="grid grid-cols-2 md:grid-cols-4 gap-4"><div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100"><p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Produção Total</p><p class="text-xl md:text-2xl font-black text-gray-800 truncate" id="preview-total-prod">--</p></div><div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100"><p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Média Diária</p><p class="text-xl md:text-2xl font-black text-gray-800 truncate" id="preview-avg-prod">--</p></div><div class="bg-white p-4 rounded-xl shadow-sm border border-green-100 relative overflow-hidden"><p class="text-[10px] font-bold text-green-600 uppercase tracking-wider">Melhor Dia</p><p class="text-lg font-black text-gray-800 truncate" id="preview-best-day">--</p><p class="text-[10px] text-gray-400" id="preview-best-val">--</p></div><div class="bg-white p-4 rounded-xl shadow-sm border border-red-100 relative overflow-hidden"><p class="text-[10px] font-bold text-red-500 uppercase tracking-wider">Pior Dia</p><p class="text-lg font-black text-gray-800 truncate" id="preview-worst-day">--</p><p class="text-[10px] text-gray-400" id="preview-worst-val">--</p></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h4 class="font-bold text-gray-700 mb-4" id="chart-title-1">Top Produtividade</h4><div class="h-64 relative"><canvas id="previewChartRanking"></canvas></div></div><div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h4 class="font-bold text-gray-700 mb-4" id="chart-title-2">Evolução do Período</h4><div class="h-64 relative"><canvas id="previewChartTimeline"></canvas></div></div></div><div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"><div class="px-6 py-4 border-b bg-gray-50 flex justify-between items-center"><span class="font-bold text-gray-700 text-sm">Detalhamento dos Lançamentos</span><span class="text-xs text-gray-400 font-mono" id="table-row-count">0 registros</span></div><div class="overflow-x-auto max-h-[400px] overflow-y-auto scrollbar-thin"><table class="w-full text-left text-sm relative"><thead class="bg-white text-gray-500 uppercase text-xs font-bold border-b sticky top-0 shadow-sm z-10"><tr><th class="p-4 bg-gray-50">Data</th><th class="p-4 bg-gray-50">Colaborador</th><th class="p-4 bg-gray-50">Produção</th><th class="p-4 bg-gray-50">Meta</th><th class="p-4 bg-gray-50">%</th></tr></thead><tbody id="preview-table-body" class="divide-y divide-gray-100"></tbody></table></div></div></div></div>
+        <div class="flex-1 overflow-y-auto bg-gray-50 p-6 scrollbar-thin"><div class="max-w-6xl mx-auto space-y-6"><div class="grid grid-cols-2 md:grid-cols-4 gap-4"><div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100"><p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Produção Total</p><p class="text-xl md:text-2xl font-black text-gray-800 truncate" id="preview-total-prod">--</p></div><div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100"><p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Média Diária</p><p class="text-xl md:text-2xl font-black text-gray-800 truncate" id="preview-avg-prod">--</p></div><div class="bg-white p-4 rounded-xl shadow-sm border border-green-100 relative overflow-hidden"><p class="text-[10px] font-bold text-green-600 uppercase tracking-wider">Melhor Dia</p><p class="text-lg font-black text-gray-800 truncate" id="preview-best-day">--</p><p class="text-[10px] text-gray-400" id="preview-best-val">--</p></div><div class="bg-white p-4 rounded-xl shadow-sm border border-red-100 relative overflow-hidden"><p class="text-[10px] font-bold text-red-500 uppercase tracking-wider">Pior Dia</p><p class="text-lg font-black text-gray-800 truncate" id="preview-worst-day">--</p><p class="text-[10px] text-gray-400" id="preview-worst-val">--</p></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h4 class="font-bold text-gray-700 mb-4" id="chart-title-1">Top Produtividade</h4><div class="h-64 relative"><canvas id="previewChartRanking"></canvas></div></div><div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h4 class="font-bold text-gray-700 mb-4" id="chart-title-2">Evolução do Período</h4><div class="h-64 relative"><canvas id="previewChartTimeline"></canvas></div></div></div><div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"><div class="px-6 py-4 border-b bg-gray-50 flex justify-between items-center"><span class="font-bold text-gray-700 text-sm">Detalhamento dos Lançamentos</span><span class="text-xs text-gray-400 font-mono" id="table-row-count">0 registros</span></div><div class="overflow-x-auto max-h-[400px] overflow-y-auto scrollbar-thin"><table class="w-full text-left text-sm whitespace-nowrap min-w-[600px] relative"><thead class="bg-white text-gray-500 uppercase text-xs font-bold border-b sticky top-0 shadow-sm z-10"><tr><th class="p-4 bg-gray-50">Data</th><th class="p-4 bg-gray-50">Colaborador</th><th class="p-4 bg-gray-50">Produção</th><th class="p-4 bg-gray-50">Meta</th><th class="p-4 bg-gray-50">%</th></tr></thead><tbody id="preview-table-body" class="divide-y divide-gray-100"></tbody></table></div></div></div></div>
     </div>
 
+    <!-- Modal Feedback Mode -->
     <div id="feedback-mode-modal" class="fixed inset-0 bg-slate-900 text-slate-100 hidden z-[60] overflow-y-auto font-sans selection:bg-blue-500/30">
         <header class="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 md:px-8 py-4 flex justify-between items-center"><div class="flex items-center gap-4"><div class="w-12 h-12 rounded-full ring-2 ring-blue-500/50 bg-slate-800 flex items-center justify-center text-xl font-bold text-blue-400" id="fb-user-initial">A</div><div><h1 class="text-xl font-bold text-white" id="fb-user-name">Carregando...</h1><p class="text-sm text-blue-400 font-medium" id="fb-user-role">...</p></div></div><div class="flex items-center gap-6"><div class="text-right hidden sm:block"><p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Data da Revisão</p><p class="text-sm text-slate-200 flex items-center gap-1 justify-end mt-0.5" id="fb-current-date">...</p></div><button onclick="closeFeedbackMode()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700"><i class="fas fa-times"></i> Encerrar</button></div></header>
         <main class="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 pb-20"><div class="lg:col-span-4 space-y-6"><section class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50 relative overflow-hidden"><h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2"><i class="fas fa-chart-line text-blue-400"></i> Andamento do Mês</h2><div class="space-y-6" id="fb-metrics-container"></div></section><div class="bg-blue-900/20 border border-blue-800/50 rounded-xl p-5 text-sm text-blue-200"><p><strong>💡 Dica de Feedback:</strong> Comece revisando os pontos fortes e as entregas recentes antes de abordar as ocorrências de melhoria.</p></div></div><div class="lg:col-span-4"><section class="h-full bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30"><h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2"><i class="fas fa-bullseye text-purple-400"></i> Últimos Lançamentos</h2><div class="relative border-l-2 border-slate-700 ml-3 py-2 space-y-8" id="fb-history-list"></div></section></div><div class="lg:col-span-4 space-y-4"><h2 class="text-lg font-semibold text-white mb-2 flex items-center gap-2 px-2"><i class="fas fa-file-alt text-emerald-400"></i> Ocorrências e Elogios</h2><div id="fb-occurrences-list" class="space-y-4"></div></div></main>
     </div>
 
+    <!-- Interface Principal do Dashboard -->
     <section id="dashboard" class="hidden min-h-screen flex flex-col bg-gray-50">
         <nav class="bg-white shadow-sm border-b px-4 md:px-8 py-3 flex justify-between items-center sticky top-0 z-40">
             <div class="flex items-center gap-4">
                 <div class="bg-blue-600 text-white w-10 h-10 rounded-xl flex items-center justify-center font-bold shadow-md text-lg" id="user-avatar"><i class="fas fa-user-graduate"></i></div>
-                <div><h2 class="font-bold text-gray-800 text-sm md:text-base" id="user-name">Carregando...</h2><span class="text-[11px] text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-full uppercase tracking-wide" id="user-role">...</span></div>
+                <div><h2 class="font-bold text-gray-800 text-sm md:text-base truncate max-w-[150px] sm:max-w-xs" id="user-name">Carregando...</h2><span class="text-[11px] text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-full uppercase tracking-wide" id="user-role">...</span></div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 shrink-0">
                 <button onclick="toggleChangePassModal()" class="text-gray-500 hover:text-blue-600 px-3 py-2 text-sm font-bold flex items-center gap-2 hover:bg-blue-50 rounded-lg transition" title="Alterar Senha"><i class="fas fa-key"></i> <span class="hidden md:inline">Senha</span></button>
                 <button onclick="logout()" class="text-gray-500 hover:text-red-500 px-4 py-2 text-sm font-bold flex items-center gap-2 hover:bg-red-50 rounded-lg transition"><i class="fas fa-sign-out-alt"></i> Sair</button>
             </div>
@@ -260,7 +309,8 @@
         <main class="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full space-y-8 pb-20">
             <div id="admin-panel" class="hidden fade-in space-y-6">
                 
-                <div class="bg-white p-1 rounded-xl shadow-sm border border-gray-100 inline-flex flex-wrap gap-1">
+                <!-- Menu de Abas com Scroll Horizontal Responsivo -->
+                <div class="bg-white p-1 rounded-xl shadow-sm border border-gray-100 flex overflow-x-auto scrollbar-thin w-full gap-1">
                     <button onclick="switchAdminTab('lancamentos')" id="tab-lancamentos" class="tab-btn active px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"><i class="fas fa-chart-line"></i> Produtividade</button>
                     <button onclick="switchAdminTab('relatorios')" id="tab-relatorios" class="tab-btn px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50"><i class="fas fa-file-pdf"></i> Relatórios</button>
                     <button onclick="switchAdminTab('erros')" id="tab-erros" class="tab-btn px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 text-red-500 hover:text-red-700 hover:bg-red-50"><i class="fas fa-exclamation-triangle"></i> Ocorrências</button>
@@ -275,7 +325,7 @@
                             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                                 <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2"><i class="fas fa-plus-circle text-green-500"></i> Novo Lançamento</h3>
                                 <form onsubmit="saveProductivity(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
-                                    <div class="md:col-span-2 relative">
+                                    <div class="md:col-span-2 relative z-20">
                                         <label class="text-xs font-bold text-gray-500 uppercase ml-1">Colaborador</label>
                                         <div class="relative">
                                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
@@ -283,7 +333,7 @@
                                             <input type="hidden" id="input-matricula">
                                             <button type="button" onclick="clearProdSearch()" id="btn-clear-prod" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
                                         </div>
-                                        <div id="prod-colab-suggestions" class="absolute z-20 w-full bg-white border border-gray-200 rounded-b-xl shadow-xl hidden max-h-60 overflow-y-auto mt-1 divide-y divide-gray-50"></div>
+                                        <div id="prod-colab-suggestions" class="absolute z-30 w-full bg-white border border-gray-200 rounded-b-xl shadow-xl hidden max-h-60 overflow-y-auto mt-1 divide-y divide-gray-50"></div>
                                     </div>
                                     <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Data</label><input type="date" id="input-date" onchange="autoFillMeta()" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-green-500" required></div>
                                     <div class="grid grid-cols-2 gap-2">
@@ -294,19 +344,19 @@
                                 </form>
                             </div>
                             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 relative">
-                                <div class="flex justify-between items-center mb-4">
+                                <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
                                     <h3 class="font-bold text-gray-800 text-lg">Histórico Geral</h3>
-                                    <div class="flex gap-2">
+                                    <div class="flex gap-2 items-center flex-wrap">
                                         <div id="bulk-actions-bar" class="hidden flex items-center gap-2 animate-fade-in mr-2">
-                                            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100"><span id="bulk-selected-count">0</span> selecionados</span>
-                                            <button onclick="toggleBatchDateModal()" class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded transition shadow-sm flex items-center gap-1"><i class="fas fa-calendar-alt"></i> Mudar Data</button>
+                                            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1.5 rounded border border-blue-100"><span id="bulk-selected-count">0</span> selecionados</span>
+                                            <button onclick="toggleBatchDateModal()" class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded transition shadow-sm flex items-center gap-1"><i class="fas fa-calendar-alt"></i> <span class="hidden sm:inline">Data</span></button>
                                             <button onclick="batchDeleteProd()" class="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded transition shadow-sm" title="Excluir Selecionados"><i class="fas fa-trash"></i></button>
                                         </div>
-                                        <input type="text" id="filter-matricula" onkeyup="filterHistory()" placeholder="Buscar..." class="border rounded-lg p-2 text-xs w-28 outline-none focus:ring-1 focus:ring-blue-500">
+                                        <input type="text" id="filter-matricula" onkeyup="filterHistory()" placeholder="Buscar..." class="border rounded-lg p-2 text-xs w-32 outline-none focus:ring-1 focus:ring-blue-500">
                                     </div>
                                 </div>
-                                <div class="overflow-hidden rounded-xl border border-gray-200">
-                                    <table class="w-full text-left text-sm">
+                                <div class="overflow-x-auto rounded-xl border border-gray-200">
+                                    <table class="w-full text-left text-sm whitespace-nowrap min-w-[500px]">
                                         <thead class="bg-gray-100 text-gray-500 uppercase text-xs font-bold">
                                             <tr><th class="p-3 w-8 text-center"><input type="checkbox" onchange="toggleAllProdSelection(this)" class="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"></th><th class="p-3">Data</th><th class="p-3">Colab.</th><th class="p-3">Prod/Meta</th><th class="p-3 text-right"></th></tr>
                                         </thead>
@@ -316,22 +366,30 @@
                             </div>
                         </div>
                         <div id="ranking-card" class="bg-white rounded-2xl shadow-sm border border-blue-100 p-6 h-fit relative">
-                            <div class="flex flex-col gap-2 mb-4 border-b pb-4">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2" id="ranking-title"><i class="fas fa-trophy text-yellow-500"></i> Ranking</h3>
-                                    <div class="flex items-center gap-2">
-                                        <input type="date" id="ranking-date" onchange="updateDailyRanking()" class="border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 w-28">
-                                        <button onclick="updateDailyRanking()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 w-7 h-7 flex items-center justify-center rounded-lg transition" title="Forçar Atualização"><i class="fas fa-sync-alt text-xs"></i></button>
+                            <div class="flex flex-col gap-3 mb-4 border-b pb-4">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div class="flex-1 min-w-0 flex items-center gap-2">
+                                        <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2 truncate" id="ranking-title">
+                                            <i class="fas fa-trophy text-yellow-500 shrink-0"></i> Ranking
+                                        </h3>
                                     </div>
+                                    <div class="flex items-center gap-1 ml-auto shrink-0" id="ranking-actions-container"></div>
                                 </div>
-                                <div class="flex bg-gray-100 p-1 rounded-lg">
-                                    <button onclick="setRankingPeriod('day')" id="btn-period-day" class="flex-1 py-1 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition">Dia</button>
-                                    <button onclick="setRankingPeriod('week')" id="btn-period-week" class="flex-1 py-1 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition">Semana</button>
-                                    <button onclick="setRankingPeriod('month')" id="btn-period-month" class="flex-1 py-1 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition">Mês</button>
+                                <div class="flex flex-wrap items-center gap-2 w-full">
+                                    <select id="ranking-sector-filter" onchange="updateDailyRanking()" class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 flex-1 min-w-[120px]">
+                                        <option value="all">Todos Setores</option>
+                                    </select>
+                                    <input type="date" id="ranking-date" onchange="updateDailyRanking()" class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 flex-1 w-[110px]">
+                                    <button onclick="updateDailyRanking()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 w-8 h-[34px] flex items-center justify-center rounded-lg transition shrink-0" title="Forçar Atualização"><i class="fas fa-sync-alt text-xs"></i></button>
                                 </div>
-                                <div class="flex bg-gray-100 p-1 rounded-lg">
-                                    <button onclick="setRankingMode('absolute')" id="btn-rank-abs" class="flex-1 py-1 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition">Volume</button>
-                                    <button onclick="setRankingMode('percent')" id="btn-rank-pct" class="flex-1 py-1 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition">Performance (%)</button>
+                                <div class="flex bg-gray-100 p-1 rounded-lg mt-1 w-full">
+                                    <button onclick="setRankingPeriod('day')" id="btn-period-day" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition">Dia</button>
+                                    <button onclick="setRankingPeriod('week')" id="btn-period-week" class="flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition">Semana</button>
+                                    <button onclick="setRankingPeriod('month')" id="btn-period-month" class="flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition">Mês</button>
+                                </div>
+                                <div class="flex bg-gray-100 p-1 rounded-lg w-full">
+                                    <button onclick="setRankingMode('absolute')" id="btn-rank-abs" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition">Volume</button>
+                                    <button onclick="setRankingMode('percent')" id="btn-rank-pct" class="flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition">Performance (%)</button>
                                 </div>
                             </div>
                             <div id="ranking-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin"><p class="text-center text-gray-400 text-sm py-4">Aguardando lançamentos...</p></div>
@@ -340,9 +398,9 @@
                 </div>
 
                 <div id="view-relatorios" class="hidden fade-in space-y-6">
-                    <div class="bg-white rounded-2xl shadow-sm border border-purple-100 p-6 relative overflow-hidden">
-                        <h3 class="font-bold text-gray-800 text-lg mb-6 flex items-center gap-2 relative z-10"><i class="fas fa-file-pdf text-purple-600"></i> Gerador de Relatórios</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                    <div class="bg-white rounded-2xl shadow-sm border border-purple-100 p-6 relative">
+                        <h3 class="font-bold text-gray-800 text-lg mb-6 flex items-center gap-2"><i class="fas fa-file-pdf text-purple-600"></i> Gerador de Relatórios</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-4">
                                 <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Colaborador (Opcional)</label><select id="report-matricula" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-purple-500 bg-white"><option value="">Todos</option></select></div>
                                 <div class="grid grid-cols-2 gap-4">
@@ -356,7 +414,7 @@
                                     <button onclick="setReportDate('week')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 py-2 rounded text-xs font-bold">Semana</button>
                                     <button onclick="setReportDate('month')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 py-2 rounded text-xs font-bold">Mês</button>
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <button onclick="viewReport()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 rounded-lg shadow transition flex items-center justify-center gap-2"><i class="fas fa-eye"></i> Visualizar</button>
                                     <button onclick="generatePDF(false)" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-lg shadow-lg shadow-purple-200 transition flex items-center justify-center gap-2"><i class="fas fa-download"></i> Baixar PDF</button>
                                 </div>
@@ -368,9 +426,9 @@
                 <div id="view-erros" class="hidden fade-in space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                         <!-- Formulário Estruturado -->
-                        <div class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-red-100 p-6 h-fit relative overflow-hidden">
-                            <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2 relative z-10"><i class="fas fa-plus-circle text-red-500"></i> Registrar Ocorrência</h3>
-                            <form onsubmit="saveError(event)" class="space-y-4 relative z-10">
+                        <div class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-red-100 p-6 h-fit relative">
+                            <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2"><i class="fas fa-plus-circle text-red-500"></i> Registrar Ocorrência</h3>
+                            <form onsubmit="saveError(event)" class="space-y-4">
                                 <div><label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Data</label><input type="date" id="error-date" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-red-500 bg-red-50/20" required></div>
                                 <div><label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Colaborador</label><select id="error-matricula" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-red-500 bg-white" required><option value="">Carregando...</option></select></div>
                                 
@@ -392,8 +450,7 @@
 
                                 <div>
                                     <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Setor da Ocorrência</label>
-                                    <select id="error-sector-field" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-red-500 bg-white">
-                                    </select>
+                                    <input type="text" id="error-sector-field" list="datalist-setores" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-red-500 bg-white" placeholder="Selecione ou digite">
                                 </div>
 
                                 <div><label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Observações Livres</label><textarea id="error-desc" rows="3" placeholder="Detalhes adicionais..." class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-red-500"></textarea></div>
@@ -410,7 +467,7 @@
                             </div>
                             
                             <div class="overflow-x-auto">
-                                <table class="w-full text-left text-sm">
+                                <table class="w-full text-left text-sm whitespace-nowrap min-w-[500px]">
                                     <thead class="bg-gray-50 text-gray-400 uppercase text-[10px] font-black tracking-widest">
                                         <tr>
                                             <th class="p-4">Data / Colab.</th>
@@ -433,9 +490,9 @@
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
                             <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2"><i class="fas fa-user-plus text-blue-500"></i> Cadastrar Usuário</h3>
-                            <button onclick="toggleBatchMetaModal()" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-200 transition"><i class="fas fa-layer-group"></i> Alterar Metas em Lote</button>
+                            <button onclick="toggleBatchMetaModal()" class="w-full md:w-auto bg-blue-100 text-blue-700 px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-blue-200 transition"><i class="fas fa-layer-group"></i> Alterar Metas em Lote</button>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end bg-gray-50 p-4 rounded-xl">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end bg-gray-50 p-4 rounded-xl relative z-10">
                             <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Nome</label><input type="text" id="new-user-name" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nome completo"></div>
                             <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Login</label><input type="text" id="new-user-login" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Matrícula (ex: 1234)"></div>
                             <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Tipo de Conta</label>
@@ -443,11 +500,21 @@
                                     <option value="colaborador">Colaborador</option><option value="admin">Gestor</option>
                                 </select>
                             </div>
-                            <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Filial / Loja</label><input type="text" id="new-user-filial" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Loja 1"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Filial / Loja</label><input type="text" id="new-user-filial" list="datalist-filiais" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Selecione ou digite"></div>
                             
-                            <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Setor</label>
-                                <select id="new-user-setor" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-blue-500 bg-white"></select>
+                            <!-- DROPDOWN CUSTOMIZADO DE CADASTRO DE SETOR -->
+                            <div class="relative">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Setor(es)</label>
+                                <div id="setor-display-new" class="w-full border rounded-lg p-2.5 mt-1 outline-none bg-white min-h-[42px] cursor-pointer flex flex-wrap gap-1 items-center transition focus-within:ring-2 focus-within:ring-blue-500" onclick="toggleMultiSelect('setor-dropdown-new')">
+                                    <span class="text-gray-400 text-sm">Selecione os setores...</span>
+                                </div>
+                                <div id="setor-dropdown-new" class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl hidden max-h-48 overflow-y-auto">
+                                    <!-- Injetado via JS -->
+                                </div>
+                                <input type="hidden" id="new-user-setor" required>
+                                <p class="text-[9px] text-gray-400 mt-0.5 ml-1 leading-tight">Múltipla escolha habilitada</p>
                             </div>
+
                             <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Meta Padrão</label><input type="text" id="new-user-meta" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 10.000"></div>
                             <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Senha Inicial</label><input type="text" id="new-user-pass" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Mínimo 6 dígitos"></div>
                             <div><button onclick="registerUser()" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-2.5 font-bold flex items-center justify-center gap-2 shadow transition h-[42px]"><i class="fas fa-save"></i> Salvar</button></div>
@@ -455,8 +522,8 @@
                     </div>
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-gray-800">Equipe e Gestores</h3><button onclick="loadTeamList()" class="text-sm text-blue-500 font-medium ml-2"><i class="fas fa-sync"></i></button></div>
-                        <div class="overflow-hidden rounded-xl border border-gray-200">
-                            <table class="w-full text-left text-sm">
+                        <div class="overflow-x-auto rounded-xl border border-gray-200">
+                            <table class="w-full text-left text-sm whitespace-nowrap min-w-[600px]">
                                 <thead class="bg-gray-100 text-gray-500 uppercase text-xs font-bold"><tr><th class="p-4">Nome</th><th class="p-4">Login / Filial / Setor</th><th class="p-4">Função</th><th class="p-4">Meta</th><th class="p-4 text-right">Ações</th></tr></thead>
                                 <tbody id="team-list-body" class="bg-white divide-y divide-gray-100"></tbody>
                             </table>
@@ -471,18 +538,18 @@
                                 <h3 class="font-bold text-gray-800 text-xl flex items-center gap-2"><i class="fas fa-shield-alt text-indigo-600"></i> Auditoria de Segurança</h3>
                                 <p class="text-xs text-gray-500 mt-1">Histórico completo de alterações no sistema.</p>
                             </div>
-                            <div class="flex flex-wrap items-center gap-3">
-                                <select id="audit-filter-action" onchange="loadAuditLogs()" class="border border-gray-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50">
+                            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                                <select id="audit-filter-action" onchange="loadAuditLogs()" class="flex-1 md:flex-none border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50">
                                     <option value="">Todas as Ações</option>
                                     <option value="Cadastro">Apenas Cadastros</option>
                                     <option value="Edição">Apenas Edições</option>
                                     <option value="Exclusão">Apenas Exclusões</option>
                                 </select>
-                                <button onclick="loadAuditLogs()" class="bg-indigo-50 text-indigo-600 font-bold hover:bg-indigo-100 px-4 py-2 rounded-lg transition text-sm flex items-center gap-2"><i class="fas fa-sync"></i> Atualizar</button>
+                                <button onclick="loadAuditLogs()" class="bg-indigo-50 text-indigo-600 font-bold hover:bg-indigo-100 px-4 py-2.5 rounded-lg transition text-sm flex items-center gap-2"><i class="fas fa-sync"></i> Atualizar</button>
                             </div>
                         </div>
-                        <div class="overflow-hidden rounded-xl border border-gray-200">
-                            <table class="w-full text-left text-sm">
+                        <div class="overflow-x-auto rounded-xl border border-gray-200">
+                            <table class="w-full text-left text-sm whitespace-nowrap min-w-[700px]">
                                 <thead class="bg-gray-50 text-gray-500 uppercase text-xs font-bold"><tr><th class="p-4 w-40">Data/Hora</th><th class="p-4">Gestor (Responsável)</th><th class="p-4 w-32">Ação</th><th class="p-4">Alvo / Detalhes</th></tr></thead>
                                 <tbody id="audit-list-body" class="bg-white divide-y divide-gray-100 text-gray-700"><tr><td colspan="4" class="p-6 text-center text-gray-400">Carregando logs...</td></tr></tbody>
                             </table>
@@ -490,44 +557,56 @@
                     </div>
                 </div>
 
+                <!-- Visão Executiva -->
                 <div id="view-executiva" class="hidden fade-in space-y-6">
                     <!-- Dashboard Header -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 p-6 relative overflow-hidden bg-gradient-to-br from-white to-indigo-50/50">
-                        <div class="flex flex-col lg:flex-row justify-between lg:items-center mb-2 relative z-10 border-b pb-6 border-indigo-100 gap-4">
+                    <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 p-6 relative bg-gradient-to-br from-white to-indigo-50/50">
+                        <!-- Header Flexível sem sobreposições -->
+                        <div class="flex flex-col xl:flex-row justify-between xl:items-center mb-6 relative z-10 border-b pb-6 border-indigo-100 gap-6">
                             <div>
                                 <h3 class="font-bold text-indigo-900 text-2xl flex items-center gap-2">
-                                    <i class="fas fa-chart-bar text-indigo-600"></i> Business Intelligence
+                                    <i class="fas fa-chart-bar text-indigo-600"></i> Visão Executiva
                                 </h3>
                                 <p class="text-sm text-gray-500 mt-1">Análise de Tendência, Performance e Ofensores de Qualidade.</p>
                                 <div id="system-start-date" class="text-xs text-indigo-400 mt-2 font-medium">Carregando início das operações...</div>
                             </div>
                             
-                            <div class="flex items-center gap-2 bg-white p-2 rounded-xl shadow-sm border border-indigo-100">
-                                <div class="flex flex-col gap-2">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-xs font-bold text-indigo-500 uppercase tracking-wide w-16 text-right">Análise:</span>
-                                        <input type="month" id="exec-month-picker" class="border border-indigo-100 bg-indigo-50/50 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 px-2 py-1 text-sm font-bold text-indigo-900 cursor-pointer">
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wide w-16 text-right">Comparar:</span>
-                                        <input type="month" id="exec-month-compare" class="border border-gray-200 bg-gray-50 rounded-lg outline-none focus:ring-2 focus:ring-gray-400 px-2 py-1 text-sm font-bold text-gray-600 cursor-pointer">
-                                    </div>
+                            <!-- Container de Filtros Responsivo -->
+                            <div class="flex flex-col sm:flex-row flex-wrap items-end sm:items-center gap-3 bg-white p-3.5 rounded-xl shadow-sm border border-indigo-100 w-full xl:w-auto">
+                                <div class="flex flex-col gap-1 w-full sm:w-auto flex-1 min-w-[120px]">
+                                    <label class="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">Setor</label>
+                                    <select id="exec-sector-filter" class="w-full border border-indigo-100 bg-indigo-50/50 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 px-3 py-2 text-sm font-bold text-indigo-900 cursor-pointer">
+                                        <option value="all">Todos</option>
+                                    </select>
                                 </div>
-                                <button onclick="loadExecutiveView()" class="bg-indigo-600 hover:bg-indigo-700 text-white h-[60px] px-4 rounded-lg text-sm font-bold shadow-md shadow-indigo-200 transition flex items-center justify-center" title="Atualizar Painel"><i class="fas fa-sync-alt"></i></button>
+                                <div class="flex flex-col gap-1 w-full sm:w-auto flex-1 min-w-[140px]">
+                                    <label class="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">Análise</label>
+                                    <input type="month" id="exec-month-picker" class="w-full border border-indigo-100 bg-indigo-50/50 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 px-3 py-2 text-sm font-bold text-indigo-900 cursor-pointer">
+                                </div>
+                                <div class="flex flex-col gap-1 w-full sm:w-auto flex-1 min-w-[140px]">
+                                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Comparativo</label>
+                                    <input type="month" id="exec-month-compare" class="w-full border border-gray-200 bg-gray-50 rounded-lg outline-none focus:ring-2 focus:ring-gray-400 px-3 py-2 text-sm font-bold text-gray-600 cursor-pointer">
+                                </div>
+                                <div class="w-full sm:w-auto mt-2 sm:mt-0 flex items-end pb-0.5">
+                                    <button onclick="loadExecutiveView()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-md shadow-indigo-200 transition flex items-center justify-center gap-2" title="Atualizar Painel">
+                                        <i class="fas fa-sync-alt"></i> <span class="sm:hidden">Atualizar</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- KPI Cards -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 relative z-10">
+                        <!-- KPI Cards (z-index ajustado para as tooltips funcionarem limpas) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative z-20">
                             <!-- Card 1: Volume -->
-                            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm exec-card group relative" onclick="openExecDrilldown('volume')">
+                            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm exec-card relative group z-10 hover:z-30" onclick="openExecDrilldown('volume')">
                                 <div class="flex justify-between items-start mb-2">
-                                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">Volume Total
-                                        <span class="exec-tooltip relative inline-block cursor-help">
-                                            <i class="fas fa-info-circle text-gray-300 hover:text-indigo-500 transition"></i>
-                                            <span class="tooltip-text absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-800 text-white text-[10px] p-2 rounded-lg text-center z-50 shadow-xl pointer-events-none">Soma absoluta de toda a produção (itens/valor) lançada no mês de análise.</span>
-                                        </span>
-                                    </p>
+                                    <div class="flex items-center gap-1 relative">
+                                        <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Volume Total</p>
+                                        <div class="exec-tooltip cursor-help relative flex items-center">
+                                            <i class="fas fa-info-circle text-gray-300 hover:text-indigo-500 transition ml-1"></i>
+                                            <div class="tooltip-text absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-gray-800 text-white text-[10px] p-2.5 rounded-lg text-center shadow-xl pointer-events-none">Soma absoluta de toda a produção (itens/valor) lançada no mês de análise.</div>
+                                        </div>
+                                    </div>
                                     <div class="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg group-hover:bg-indigo-500 group-hover:text-white transition"><i class="fas fa-boxes"></i></div>
                                 </div>
                                 <p class="text-3xl font-black text-gray-800 truncate mb-1" id="exec-vol-total">--</p>
@@ -535,14 +614,15 @@
                             </div>
 
                             <!-- Card 2: Média -->
-                            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm exec-card group relative" onclick="openExecDrilldown('dias')">
+                            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm exec-card relative group z-10 hover:z-30" onclick="openExecDrilldown('dias')">
                                 <div class="flex justify-between items-start mb-2">
-                                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">Média Diária
-                                        <span class="exec-tooltip relative inline-block cursor-help">
-                                            <i class="fas fa-info-circle text-gray-300 hover:text-blue-500 transition"></i>
-                                            <span class="tooltip-text absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-800 text-white text-[10px] p-2 rounded-lg text-center z-50 shadow-xl pointer-events-none">Volume total dividido pela quantidade de dias em que houve algum lançamento no mês.</span>
-                                        </span>
-                                    </p>
+                                    <div class="flex items-center gap-1 relative">
+                                        <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Média Diária</p>
+                                        <div class="exec-tooltip cursor-help relative flex items-center">
+                                            <i class="fas fa-info-circle text-gray-300 hover:text-blue-500 transition ml-1"></i>
+                                            <div class="tooltip-text absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-gray-800 text-white text-[10px] p-2.5 rounded-lg text-center shadow-xl pointer-events-none">Volume total dividido pela quantidade de dias trabalhados no mês.</div>
+                                        </div>
+                                    </div>
                                     <div class="p-1.5 bg-blue-50 text-blue-500 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition"><i class="fas fa-chart-line"></i></div>
                                 </div>
                                 <p class="text-3xl font-black text-gray-800 truncate mb-1" id="exec-avg-total">--</p>
@@ -550,29 +630,32 @@
                             </div>
 
                             <!-- Card 3: Ocorrências -->
-                            <div class="bg-white p-5 rounded-xl border border-red-100 shadow-sm exec-card group relative" onclick="openExecDrilldown('erros')">
+                            <div class="bg-white p-5 rounded-xl border border-red-100 shadow-sm exec-card relative group z-10 hover:z-30" onclick="openExecDrilldown('erros')">
                                 <div class="flex justify-between items-start mb-2">
-                                    <p class="text-[11px] font-bold text-red-500 uppercase tracking-wider flex items-center gap-1">Índice de Ocorrências
-                                        <span class="exec-tooltip relative inline-block cursor-help">
-                                            <i class="fas fa-info-circle text-red-300 hover:text-red-500 transition"></i>
-                                            <span class="tooltip-text absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-800 text-white text-[10px] p-2 rounded-lg text-center z-50 shadow-xl pointer-events-none">Quantidade total de registros de ocorrências (Sobras, Faltas, Divergências, etc) no período.</span>
-                                        </span>
-                                    </p>
+                                    <div class="flex items-center gap-1 relative">
+                                        <p class="text-[11px] font-bold text-red-500 uppercase tracking-wider">Ocorrências</p>
+                                        <div class="exec-tooltip cursor-help relative flex items-center">
+                                            <i class="fas fa-info-circle text-red-300 hover:text-red-500 transition ml-1"></i>
+                                            <div class="tooltip-text absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-gray-800 text-white text-[10px] p-2.5 rounded-lg text-center shadow-xl pointer-events-none">Quantidade total de registros de ocorrências (Sobras, Faltas, Divergências, etc).</div>
+                                        </div>
+                                    </div>
                                     <div class="p-1.5 bg-red-50 text-red-500 rounded-lg group-hover:bg-red-500 group-hover:text-white transition"><i class="fas fa-exclamation-triangle"></i></div>
                                 </div>
                                 <p class="text-3xl font-black text-gray-800 truncate mb-1" id="exec-err-total">--</p>
                                 <p class="text-xs font-bold" id="exec-err-mom">--</p>
                             </div>
 
-                            <!-- Card 4: Atingimento de Meta -->
-                            <div class="bg-white p-5 rounded-xl border border-emerald-100 shadow-sm exec-card group relative" onclick="openExecDrilldown('users')">
+                            <!-- Card 4: Meta -->
+                            <div class="bg-white p-5 rounded-xl border border-emerald-100 shadow-sm exec-card relative group z-10 hover:z-30" onclick="openExecDrilldown('users')">
                                 <div class="flex justify-between items-start mb-2">
-                                    <p class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">Atingimento de Meta
-                                        <span class="exec-tooltip relative inline-block cursor-help">
-                                            <i class="fas fa-info-circle text-emerald-300 hover:text-emerald-500 transition"></i>
-                                            <span class="tooltip-text absolute bottom-full right-0 mb-2 w-56 bg-gray-800 text-white text-[10px] p-2 rounded-lg text-center z-50 shadow-xl pointer-events-none">Performance consolidada de toda a equipe: (Volume Total / Meta Acumulada do Mês) * 100.</span>
-                                        </span>
-                                    </p>
+                                    <div class="flex items-center gap-1 relative">
+                                        <p class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Meta (Equipe)</p>
+                                        <!-- Note o tooltip-right para evitar que corte no lado direito da tela -->
+                                        <div class="exec-tooltip tooltip-right cursor-help relative flex items-center">
+                                            <i class="fas fa-info-circle text-emerald-300 hover:text-emerald-500 transition ml-1"></i>
+                                            <div class="tooltip-text absolute bottom-full mb-2 w-60 bg-gray-800 text-white text-[10px] p-2.5 rounded-lg text-center shadow-xl pointer-events-none">Performance consolidada de toda a equipe: (Volume Total / Meta Acumulada do Mês) * 100.</div>
+                                        </div>
+                                    </div>
                                     <div class="p-1.5 bg-emerald-50 text-emerald-500 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition"><i class="fas fa-bullseye"></i></div>
                                 </div>
                                 <p class="text-3xl font-black text-gray-800 truncate mb-1" id="exec-goal-total">--</p>
@@ -585,20 +668,20 @@
                     <div class="space-y-6 relative z-10">
                         <!-- Gráfico 1: Evolução Completa Largura Total -->
                         <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
-                            <h4 class="font-bold text-gray-800 mb-4 text-base flex justify-between items-center">
+                            <h4 class="font-bold text-gray-800 mb-4 text-base flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                                 Evolução da Produção no Período
-                                <span id="exec-chart-label-1" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100"></span>
+                                <span id="exec-chart-label-1" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 self-start sm:self-auto"></span>
                             </h4>
-                            <div class="h-80 relative"><canvas id="execChartMoM"></canvas></div>
+                            <div class="h-80 relative w-full min-h-[300px]"><canvas id="execChartMoM"></canvas></div>
                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <!-- Gráfico 2: Distribuição de Ocorrências (Novo!) -->
+                            <!-- Gráfico 2: Distribuição de Ocorrências -->
                             <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
                                 <h4 class="font-bold text-gray-800 mb-4 text-base flex items-center gap-2">
-                                    <i class="fas fa-chart-pie text-gray-400"></i> Ocorrências por Tipo
+                                    <i class="fas fa-chart-pie text-gray-400"></i> Distribuição de Ocorrências
                                 </h4>
-                                <div class="h-64 relative flex justify-center items-center">
+                                <div class="h-64 relative flex justify-center items-center min-h-[250px]">
                                     <canvas id="execChartErrorTypes"></canvas>
                                     <div id="exec-no-errors-msg" class="absolute hidden flex flex-col items-center text-center">
                                         <i class="fas fa-check-circle text-4xl text-green-200 mb-2"></i>
@@ -610,9 +693,9 @@
                             <!-- Gráfico 3: Ofensores -->
                             <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
                                 <h4 class="font-bold text-gray-800 mb-4 text-base flex items-center gap-2">
-                                    <i class="fas fa-users text-gray-400"></i> Top Ofensores (Volume de Erros)
+                                    <i class="fas fa-users text-gray-400"></i> Colab. com Mais Ocorrências
                                 </h4>
-                                <div class="h-64 relative flex justify-center items-center"><canvas id="execChartErrors"></canvas></div>
+                                <div class="h-64 relative flex justify-center items-center min-h-[250px]"><canvas id="execChartErrors"></canvas></div>
                             </div>
                         </div>
                     </div>
@@ -668,23 +751,10 @@
         const SYSTEM_DOMAIN = "@checkout.system";
         
         const APP_CONFIG = {
-            setores: ["P1", "P2", "P3", "M1", "M2", "VL", "AL", "AT", "VS", "TM", "PS", "VS2"],
-            fatorSabado: 0.5 
+            setores: ["CHECKOUT", "P1", "P2", "P3", "M1", "M2", "VL", "AL", "AT", "VS", "TM", "PS", "VS2"],
+            fatorSabado: 0.5  
         };
         const DEFAULT_SECTOR = APP_CONFIG.setores[0];
-
-        function populateSectors() {
-            const options = APP_CONFIG.setores.map(s => `<option value="${s}">${s}</option>`).join('');
-            const editSetor = document.getElementById('edit-setor');
-            const newSetor = document.getElementById('new-user-setor');
-            const errorSector = document.getElementById('error-sector-field');
-            const editErrorSector = document.getElementById('edit-error-sector');
-            if(editSetor) editSetor.innerHTML = options;
-            if(newSetor) newSetor.innerHTML = options;
-            if(errorSector) errorSector.innerHTML = options;
-            if(editErrorSector) editErrorSector.innerHTML = options;
-        }
-        populateSectors();
 
         let currentUserData = null;
         let myChart = null; let previewChart1 = null; let previewChart2 = null;
@@ -692,7 +762,7 @@
         
         let allProductivityData = []; let allCollaborators = []; let allUsersCache = [];    
         let selectedCollaborators = []; let selectedProductivityIds = [];
-        let reportDataCache = []; let windowCurrentRankingData = []; 
+        let reportDataCache = []; window.currentRankingData = []; 
         
         window.execDrilldownData = { volume: [], days: [], errors: [], prevMonthStr: '', currMonthStr: '' };
         window.systemStartDateStr = null;
@@ -700,7 +770,117 @@
         let toastTimeout; window.isRepairing = false;
         let rankingMode = 'absolute'; let rankingPeriod = 'day'; 
 
-        // Função de Confirmação Customizada (Substitui o window.confirm)
+        // --- LÓGICA DO MULTI-SELECT DE SETORES ---
+        window.toggleMultiSelect = (dropdownId) => {
+            document.getElementById(dropdownId).classList.toggle('hidden');
+        };
+
+        window.updateMultiSelect = (dropdownContainerId, displayId, hiddenInputId) => {
+            const container = document.getElementById(dropdownContainerId);
+            const checkboxes = container.querySelectorAll('.custom-setor-checkbox');
+            const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+
+            const display = document.getElementById(displayId);
+            const hiddenInput = document.getElementById(hiddenInputId);
+
+            if (selected.length === 0) {
+                display.innerHTML = '<span class="text-gray-400 text-sm">Selecione os setores...</span>';
+                hiddenInput.value = '';
+            } else {
+                display.innerHTML = selected.map(s => `<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold shadow-sm">${s}</span>`).join('');
+                hiddenInput.value = selected.join(', '); 
+            }
+        };
+
+        // Fechar o dropdown ao clicar fora
+        document.addEventListener('click', (e) => {
+            ['new', 'edit'].forEach(prefix => {
+                const display = document.getElementById(`setor-display-${prefix}`);
+                const dropdown = document.getElementById(`setor-dropdown-${prefix}`);
+                if (display && dropdown && !display.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        });
+        // ----------------------------------------
+
+        window.canViewData = (recordFilial, recordSetor) => {
+            if (!currentUserData) return false;
+            if (currentUserData.isMaster) return true;
+            
+            const myFilial = currentUserData.filial || 'Padrão';
+            if ((recordFilial || 'Padrão') !== myFilial) return false;
+
+            const mySectors = (currentUserData.setor || DEFAULT_SECTOR).split(',').map(s => s.trim().toUpperCase());
+            const recordSectors = (recordSetor || DEFAULT_SECTOR).split(',').map(s => s.trim().toUpperCase());
+
+            if (mySectors.includes('TODOS') || mySectors.includes('GERAL')) return true;
+            return mySectors.some(mySec => recordSectors.includes(mySec));
+        };
+
+        function populateSectors() {
+            let allSectors = new Set(APP_CONFIG.setores.map(s => s.toUpperCase()));
+            if (typeof allUsersCache !== 'undefined' && allUsersCache.length > 0) {
+                allUsersCache.forEach(u => { 
+                    if (u.setor) {
+                        u.setor.split(',').forEach(s => allSectors.add(s.trim().toUpperCase()));
+                    }
+                });
+            }
+            const sortedSectors = Array.from(allSectors).sort();
+
+            const datalistOptions = sortedSectors.map(s => `<option value="${s}">`).join('');
+            const datalist = document.getElementById('datalist-setores');
+            if(datalist) datalist.innerHTML = datalistOptions;
+
+            const setupFilter = (filterElement) => {
+                if (!filterElement) return;
+                const currentVal = filterElement.value;
+                if (typeof currentUserData !== 'undefined' && currentUserData && !currentUserData.isMaster) {
+                    const mySectors = (currentUserData.setor || DEFAULT_SECTOR).split(',').map(s => s.trim().toUpperCase());
+                    if (mySectors.length === 1 && mySectors[0] !== 'TODOS') {
+                        filterElement.innerHTML = `<option value="${mySectors[0]}">${mySectors[0]}</option>`;
+                        filterElement.value = mySectors[0];
+                        filterElement.disabled = true;
+                        filterElement.classList.add('bg-gray-200', 'cursor-not-allowed', 'opacity-80');
+                    } else {
+                        filterElement.disabled = false;
+                        filterElement.classList.remove('bg-gray-200', 'cursor-not-allowed', 'opacity-80');
+                        filterElement.innerHTML = '<option value="all">Meus Setores</option>' + 
+                                                  mySectors.filter(s => s !== 'TODOS').map(s => `<option value="${s}">${s}</option>`).join('');
+                        if(currentVal && (currentVal === 'all' || mySectors.includes(currentVal.toUpperCase()))) filterElement.value = currentVal;
+                        else filterElement.value = 'all';
+                    }
+                } else {
+                    filterElement.disabled = false;
+                    filterElement.classList.remove('bg-gray-200', 'cursor-not-allowed', 'opacity-80');
+                    filterElement.innerHTML = '<option value="all">Todos Setores</option>' + 
+                                              sortedSectors.map(s => `<option value="${s}">${s}</option>`).join('');
+                    if(currentVal && currentVal !== 'all' && sortedSectors.includes(currentVal.toUpperCase())) filterElement.value = currentVal;
+                    else filterElement.value = 'all';
+                }
+            };
+
+            setupFilter(document.getElementById('ranking-sector-filter'));
+            setupFilter(document.getElementById('exec-sector-filter'));
+
+            // Construir as opções dos checkboxes de multi-seleção
+            const renderCheckboxes = (dropdownId, displayId, hiddenInputId) => {
+                const dropdown = document.getElementById(dropdownId);
+                if (dropdown) {
+                    dropdown.innerHTML = sortedSectors.map(s => `
+                        <label class="flex items-center px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 transition">
+                            <input type="checkbox" value="${s}" class="mr-3 w-4 h-4 rounded text-blue-600 focus:ring-blue-500 custom-setor-checkbox cursor-pointer" onchange="updateMultiSelect('${dropdownId}', '${displayId}', '${hiddenInputId}')">
+                            <span class="text-sm font-medium text-gray-700">${s}</span>
+                        </label>`).join('');
+                }
+            };
+            
+            renderCheckboxes('setor-dropdown-new', 'setor-display-new', 'new-user-setor');
+            renderCheckboxes('setor-dropdown-edit', 'setor-display-edit', 'edit-setor');
+        }
+        populateSectors();
+
         window.customConfirm = (msg, onConfirm) => {
             const modal = document.getElementById('confirm-modal');
             document.getElementById('confirm-modal-msg').innerText = msg;
@@ -994,7 +1174,6 @@
             if(tabName === 'erros') loadErrorHistory();
             if(tabName === 'auditoria') loadAuditLogs();
             if(tabName === 'executiva') loadExecutiveView();
-            if(tabName === 'lancamentos' || tabName === 'erros' || tabName === 'relatorios') loadCollaboratorsForSelect();
         };
 
         window.togglePassVisibility = () => { const i = document.getElementById('login-pass'); const icon = document.getElementById('eye-icon'); i.type = i.type === 'password' ? 'text' : 'password'; icon.className = i.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash'; }
@@ -1011,19 +1190,26 @@
         window.openEditUser = (uid, nome, matricula, meta, role, setor, filial) => {
             document.getElementById('edit-uid').value = uid; document.getElementById('edit-nome').value = nome; document.getElementById('edit-matricula').value = matricula; document.getElementById('edit-meta').value = meta ? meta.toString().replace('.', ',') : ''; document.getElementById('edit-role').value = role || 'colaborador';
             
-            const setorSelect = document.getElementById('edit-setor'); 
+            const hiddenSetorInput = document.getElementById('edit-setor'); 
             const filialInput = document.getElementById('edit-filial');
             
-            setorSelect.value = setor || DEFAULT_SECTOR;
+            hiddenSetorInput.value = setor || DEFAULT_SECTOR;
             filialInput.value = filial || 'Padrão';
 
+            // Atualiza a parte visual e checkboxes do Setor
+            const selectedSectors = (setor || DEFAULT_SECTOR).split(',').map(s => s.trim());
+            document.querySelectorAll('#setor-dropdown-edit input[type="checkbox"]').forEach(cb => {
+                cb.checked = selectedSectors.includes(cb.value);
+            });
+            updateMultiSelect('setor-dropdown-edit', 'setor-display-edit', 'edit-setor');
+
             if (!currentUserData.isMaster) { 
-                setorSelect.disabled = true; setorSelect.classList.add('bg-gray-200', 'cursor-not-allowed'); 
-                filialInput.disabled = true; filialInput.classList.add('bg-gray-200', 'cursor-not-allowed');
+                filialInput.disabled = true; 
+                filialInput.classList.add('bg-gray-200', 'cursor-not-allowed');
             } else { 
-                setorSelect.disabled = false; setorSelect.classList.remove('bg-gray-200', 'cursor-not-allowed'); 
-                filialInput.disabled = false; filialInput.classList.remove('bg-gray-200', 'cursor-not-allowed');
-            } 
+                filialInput.disabled = false; 
+                filialInput.classList.remove('bg-gray-200', 'cursor-not-allowed');
+            }
             toggleEditModal();
         };
 
@@ -1049,7 +1235,8 @@
         };
 
         window.saveEditUser = async () => {
-            const uid = document.getElementById('edit-uid').value; const nome = document.getElementById('edit-nome').value; const matricula = document.getElementById('edit-matricula').value; const meta = parsePtBrNumber(document.getElementById('edit-meta').value); const role = document.getElementById('edit-role').value; const setor = document.getElementById('edit-setor').value;
+            const uid = document.getElementById('edit-uid').value; const nome = document.getElementById('edit-nome').value; const matricula = document.getElementById('edit-matricula').value; const meta = parsePtBrNumber(document.getElementById('edit-meta').value); const role = document.getElementById('edit-role').value; 
+            const setor = document.getElementById('edit-setor').value.toUpperCase().trim() || DEFAULT_SECTOR;
             let filial = document.getElementById('edit-filial').value.trim() || 'Padrão';
             
             if (!currentUserData.isMaster) filial = currentUserData.filial || 'Padrão';
@@ -1066,13 +1253,14 @@
         };
 
         window.registerUser = async () => {
-            const n = document.getElementById('new-user-name').value; const m = document.getElementById('new-user-login').value; const passInput = document.getElementById('new-user-pass').value; const role = document.getElementById('new-user-role').value; let setor = document.getElementById('new-user-setor').value; const meta = parsePtBrNumber(document.getElementById('new-user-meta').value);
+            const n = document.getElementById('new-user-name').value; const m = document.getElementById('new-user-login').value; const passInput = document.getElementById('new-user-pass').value; const role = document.getElementById('new-user-role').value; 
+            let setor = document.getElementById('new-user-setor').value.toUpperCase().trim() || DEFAULT_SECTOR; 
+            const meta = parsePtBrNumber(document.getElementById('new-user-meta').value);
             
             let filial = document.getElementById('new-user-filial').value.trim() || 'Padrão';
 
-            if(!n || !m) return showToast("Preencha nome e login.", true);
-            if (!currentUserData.isMaster) {
-                setor = currentUserData.setor || DEFAULT_SECTOR;
+           if (!currentUserData.isMaster) {
+                // Mantém a trava apenas para a Filial, permitindo que o setor venha do input
                 filial = currentUserData.filial || 'Padrão';
             }
             
@@ -1083,27 +1271,42 @@
                 const cred = await createUserWithEmailAndPassword(tempAuth, emailFinal, passFinal);
                 await setDoc(doc(db, "users", cred.user.uid), { nome: n, matricula: m, email: emailFinal, role: role, setor: setor, filial: filial, meta: meta, createdAt: serverTimestamp() });
                 await signOut(tempAuth); await logSystemAction('Cadastro', m, `Criou novo usuário: ${n} (${role} - Loja: ${filial} - ${setor})`);
-                showToast(`Usuário (${role}) criado com sucesso!`); document.getElementById('new-user-name').value = ''; document.getElementById('new-user-login').value = ''; document.getElementById('new-user-pass').value = ''; document.getElementById('new-user-meta').value = '';
+                showToast(`Usuário (${role}) criado com sucesso!`); document.getElementById('new-user-name').value = ''; document.getElementById('new-user-login').value = ''; document.getElementById('new-user-pass').value = ''; document.getElementById('new-user-meta').value = ''; document.getElementById('new-user-setor').value = '';
+                
+                // Reseta o visual do dropdown de setores
+                const displayNovo = document.getElementById('setor-display-new');
+                if(displayNovo) {
+                    displayNovo.innerHTML = '<span class="text-gray-400 text-sm">Selecione os setores...</span>';
+                    document.querySelectorAll('#setor-dropdown-new input[type="checkbox"]').forEach(cb => cb.checked = false);
+                }
+
                 if(!document.getElementById('view-equipe').classList.contains('hidden')) loadTeamList();
             } catch(err) { if(err.code === 'auth/email-already-in-use') showToast("Este login já está em uso.", true); else showToast(err.message, true); }
         };
 
         window.loadCollaboratorsForSelect = async () => {
             try {
-                const q = query(collection(db, "users"), where("role", "==", "colaborador")); const snap = await getDocs(q);
+                const q = query(collection(db, "users")); 
+                const snap = await getDocs(q);
                 allUsersCache = []; allCollaborators = []; 
                 const mySetor = currentUserData.setor || DEFAULT_SECTOR;
                 const myFilial = currentUserData.filial || 'Padrão';
                 
                 snap.forEach(doc => {
-                    const data = doc.data(); data.uid = doc.id; allUsersCache.push(data);
-                    const uSetor = data.setor || DEFAULT_SECTOR;
-                    const uFilial = data.filial || 'Padrão';
+                    const data = doc.data(); data.uid = doc.id; 
+                    allUsersCache.push(data);
+                    
+                    if (data.role === 'colaborador') {
+                        const uSetor = data.setor || DEFAULT_SECTOR;
+                        const uFilial = data.filial || 'Padrão';
 
-                    if (currentUserData.isMaster || (uFilial === myFilial && uSetor === mySetor)) {
-                        allCollaborators.push(data);
+                        if (window.canViewData(uFilial, uSetor)) {
+                            allCollaborators.push(data);
+                        }
                     }
                 });
+                
+                populateSectors();
                 
                 allCollaborators.sort((a, b) => a.nome.localeCompare(b.nome));
                 const simpleOptions = '<option value="">Selecione...</option>' + allCollaborators.map(u => `<option value="${u.matricula}">${u.nome} - ${u.matricula}</option>`).join('');
@@ -1139,33 +1342,47 @@
                     const uSetor = data.setor || DEFAULT_SECTOR;
                     const uFilial = data.filial || 'Padrão';
 
-                    if (!currentUserData.isMaster) {
-                        if (uFilial !== myFilial) return;
-                        if (uSetor !== mySetor) return;
-                    }
+                    if (!window.canViewData(uFilial, uSetor)) return;
+                    
                     users.push({id: doc.id, ...data});
                 });
                 
                 const MASTER_EMAILS = ['erlan.santos@dpsp.com.br'];
-                users.sort((a, b) => {
-                    if (a.role === 'admin' && b.role !== 'admin') return -1; if (a.role !== 'admin' && b.role === 'admin') return 1;
-                    if (sortMode === 'date') return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); else return a.nome.localeCompare(b.nome);
-                });
 
                 if(users.length === 0) return tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center">Ninguém cadastrado na sua filial/setor.</td></tr>';
 
-                users.forEach((u) => {
-                    const isTargetMaster = MASTER_EMAILS.includes(u.email); const metaFormatted = u.meta ? formatNumber(u.meta) : '-';
-                    let roleBadge = u.role === 'admin' ? '<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold">Gestor</span>' : '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-bold">Colaborador</span>';
-                    if (isTargetMaster) roleBadge = '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-bold border border-yellow-200"><i class="fas fa-crown text-[10px]"></i> Super Admin</span>';
-                    
-                    const setorBadge = `<span class="block text-[10px] text-gray-400 mt-1 font-bold uppercase">Loja: ${u.filial || 'Padrão'} | ${u.setor || DEFAULT_SECTOR}</span>`;
-                    const isMe = (u.id === currentUserData.uid); const nameDisplay = isMe ? `${u.nome} <span class="text-green-600 font-bold text-xs ml-1">(Você)</span>` : u.nome;
-                    
-                    let deleteBtn = isMe ? `<button class="text-gray-300 border border-gray-100 px-3 py-1 rounded text-xs cursor-not-allowed" title="Você não pode se excluir"><i class="fas fa-ban"></i></button>` : isTargetMaster ? `<button class="text-yellow-400 border border-yellow-100 px-3 py-1 rounded text-xs cursor-not-allowed bg-yellow-50" title="Protegido"><i class="fas fa-shield-alt"></i></button>` : `<button onclick="deleteUser('${u.id}', '${u.nome}', '${u.setor || 'Geral'}', '${u.role}')" class="text-red-500 border border-red-200 px-3 py-1 rounded text-xs hover:bg-red-50" title="Remover"><i class="fas fa-trash"></i></button>`;
-                    const feedbackBtn = `<button onclick="openFeedbackMode('${u.matricula}')" class="text-emerald-500 border border-emerald-200 px-3 py-1 rounded text-xs hover:bg-emerald-50" title="Feedback"><i class="fas fa-desktop"></i></button>`;
+                const usersBySetor = {};
+                users.forEach(u => {
+                    const s = u.setor || DEFAULT_SECTOR;
+                    if(!usersBySetor[s]) usersBySetor[s] = [];
+                    usersBySetor[s].push(u);
+                });
 
-                    html += `<tr class="border-b ${isMe ? 'bg-green-50/30' : ''} ${isTargetMaster && !isMe ? 'bg-yellow-50/30' : ''}"><td class="p-4 font-medium flex items-center gap-2">${nameDisplay} ${isTargetMaster ? '<i class="fas fa-check-circle text-blue-500 text-xs"></i>' : ''}</td><td class="p-4 text-gray-500 font-mono text-xs">${u.matricula || u.email} ${setorBadge}</td><td class="p-4">${roleBadge}</td><td class="p-4 text-gray-500">${metaFormatted}</td><td class="p-4 text-right flex justify-end gap-2">${feedbackBtn}<button onclick="openEditUser('${u.id}', '${u.nome}', '${u.matricula}', ${u.meta || 0}, '${u.role}', '${u.setor || DEFAULT_SECTOR}', '${u.filial || 'Padrão'}')" class="text-blue-500 border border-blue-200 px-3 py-1 rounded text-xs hover:bg-blue-50"><i class="fas fa-edit"></i></button>${deleteBtn}</td></tr>`;
+                const sortedSetores = Object.keys(usersBySetor).sort();
+
+                sortedSetores.forEach(setorName => {
+                    html += `<tr class="bg-indigo-50/60 border-y border-indigo-100"><td colspan="5" class="p-2 px-4 text-xs font-black text-indigo-800 uppercase tracking-widest"><i class="fas fa-layer-group mr-2 text-indigo-500"></i> Setor: ${setorName}</td></tr>`;
+                    
+                    let setorUsers = usersBySetor[setorName];
+                    
+                    setorUsers.sort((a, b) => {
+                        if (a.role === 'admin' && b.role !== 'admin') return -1; if (a.role !== 'admin' && b.role === 'admin') return 1;
+                        if (sortMode === 'date') return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); else return a.nome.localeCompare(b.nome);
+                    });
+
+                    setorUsers.forEach((u) => {
+                        const isTargetMaster = MASTER_EMAILS.includes(u.email); const metaFormatted = u.meta ? formatNumber(u.meta) : '-';
+                        let roleBadge = u.role === 'admin' ? '<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold">Gestor</span>' : '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-bold">Colaborador</span>';
+                        if (isTargetMaster) roleBadge = '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-bold border border-yellow-200"><i class="fas fa-crown text-[10px]"></i> Super Admin</span>';
+                        
+                        const setorBadge = `<span class="block text-[10px] text-gray-400 mt-1 font-bold uppercase">Loja: ${u.filial || 'Padrão'} | ${u.setor || DEFAULT_SECTOR}</span>`;
+                        const isMe = (u.id === currentUserData.uid); const nameDisplay = isMe ? `${u.nome} <span class="text-green-600 font-bold text-xs ml-1">(Você)</span>` : u.nome;
+                        
+                        let deleteBtn = isMe ? `<button class="text-gray-300 border border-gray-100 px-3 py-1 rounded text-xs cursor-not-allowed" title="Você não pode se excluir"><i class="fas fa-ban"></i></button>` : isTargetMaster ? `<button class="text-yellow-400 border border-yellow-100 px-3 py-1 rounded text-xs cursor-not-allowed bg-yellow-50" title="Protegido"><i class="fas fa-shield-alt"></i></button>` : `<button onclick="deleteUser('${u.id}', '${u.nome}', '${u.setor || 'Geral'}', '${u.role}')" class="text-red-500 border border-red-200 px-3 py-1 rounded text-xs hover:bg-red-50" title="Remover"><i class="fas fa-trash"></i></button>`;
+                        const feedbackBtn = `<button onclick="openFeedbackMode('${u.matricula}')" class="text-emerald-500 border border-emerald-200 px-3 py-1 rounded text-xs hover:bg-emerald-50" title="Feedback"><i class="fas fa-desktop"></i></button>`;
+
+                        html += `<tr class="border-b ${isMe ? 'bg-green-50/30' : ''} ${isTargetMaster && !isMe ? 'bg-yellow-50/30' : ''}"><td class="p-4 font-medium flex items-center gap-2">${nameDisplay} ${isTargetMaster ? '<i class="fas fa-check-circle text-blue-500 text-xs"></i>' : ''}</td><td class="p-4 text-gray-500 font-mono text-xs">${u.matricula || u.email} ${setorBadge}</td><td class="p-4">${roleBadge}</td><td class="p-4 text-gray-500">${metaFormatted}</td><td class="p-4 text-right flex justify-end gap-2">${feedbackBtn}<button onclick="openEditUser('${u.id}', '${u.nome}', '${u.matricula}', ${u.meta || 0}, '${u.role}', '${u.setor || DEFAULT_SECTOR}', '${u.filial || 'Padrão'}')" class="text-blue-500 border border-blue-200 px-3 py-1 rounded text-xs hover:bg-blue-50"><i class="fas fa-edit"></i></button>${deleteBtn}</td></tr>`;
+                    });
                 });
                 tbody.innerHTML = html;
             } catch(e) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-red-400">Erro.</td></tr>'; }
@@ -1227,10 +1444,8 @@
                         uFilial = uFilial || (userObj ? (userObj.filial || 'Padrão') : 'Padrão');
                     }
                     
-                    if (!currentUserData.isMaster) {
-                        if (uFilial !== myFilial) return;
-                        if (uSetor !== mySetor) return;
-                    }
+                    if (!window.canViewData(uFilial, uSetor)) return;
+                    
                     allProductivityData.push(data);
                 });
                 renderHistoryTable(allProductivityData.slice(0, 20)); window.updateDailyRanking(); 
@@ -1268,10 +1483,8 @@
                      uFilial = uFilial || (userObj ? (userObj.filial || 'Padrão') : 'Padrão');
                  }
                  
-                 if (!currentUserData.isMaster) {
-                     if (uFilial !== myFilial) return;
-                     if (uSetor !== mySetor) return;
-                 }
+                 if (!window.canViewData(uFilial, uSetor)) return;
+                 
                  data.push(row);
              });
              data.sort((a, b) => a.date.localeCompare(b.date)); return { data, start, end };
@@ -1381,7 +1594,7 @@
             const desc = document.getElementById('error-desc').value;
             const type = document.getElementById('error-type').value;
             const val = document.getElementById('error-value').value;
-            const sec = document.getElementById('error-sector-field').value;
+            const sec = document.getElementById('error-sector-field').value.trim() || DEFAULT_SECTOR;
 
             if(!m) return showToast("Selecione um colaborador", true);
             
@@ -1435,10 +1648,7 @@
                         uFilial = uFilial || (userObj ? (userObj.filial || 'Padrão') : 'Padrão');
                     }
                     
-                    if (!currentUserData.isMaster) {
-                        if (uFilial !== myFilial) return;
-                        if (uSetor !== mySetor) return;
-                    }
+                    if (!window.canViewData(uFilial, uSetor)) return;
                     
                     const nome = resolveName(data.matricula).split(' ')[0]; 
                     const safeDesc = (data.description || '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n').replace(/\r/g, '');
@@ -1453,18 +1663,18 @@
 
                     html += `
                         <tr class="hover:bg-gray-50 transition border-b border-gray-100 cursor-pointer" onclick="if(event.target.closest('button')) return; openEditError('${doc.id}', '${data.date}', '${data.matricula}', '${data.type || 'Outros'}', '${data.value || ''}', '${data.sector || uSetor}', '${safeDesc}')">
-                            <td class="p-4">
+                            <td class="p-4 whitespace-nowrap">
                                 <div class="font-bold text-gray-800">${data.date.split('-').reverse().join('/')}</div>
                                 <div class="text-[10px] text-gray-400 uppercase font-bold">${nome}</div>
                             </td>
-                            <td class="p-4">
+                            <td class="p-4 whitespace-nowrap">
                                 <span class="px-2 py-1 rounded-md text-[10px] font-black uppercase ${typeClass}">${data.type || 'Outros'}</span>
                             </td>
-                            <td class="p-4 font-mono font-bold text-gray-600">
+                            <td class="p-4 font-mono font-bold text-gray-600 whitespace-nowrap">
                                 ${data.value ? 'R$ ' + data.value : '---'}
                             </td>
-                            <td class="p-4 max-w-xs">
-                                <div class="text-xs text-gray-600 italic truncate" title="${data.description || ''}">
+                            <td class="p-4 max-w-xs whitespace-normal min-w-[200px]">
+                                <div class="text-xs text-gray-600 italic break-words">
                                     ${data.description || '<span class="text-gray-300">Sem obs.</span>'}
                                 </div>
                                 <div class="text-[9px] text-gray-400 mt-1 uppercase">Setor: ${data.sector || uSetor || 'N/A'}</div>
@@ -1507,7 +1717,7 @@
             const mat = document.getElementById('edit-error-matricula').value;
             const type = document.getElementById('edit-error-type').value;
             const value = document.getElementById('edit-error-value').value;
-            const sector = document.getElementById('edit-error-sector').value;
+            const sector = document.getElementById('edit-error-sector').value.trim() || DEFAULT_SECTOR;
             const desc = document.getElementById('edit-error-desc').value;
 
             try {
@@ -1585,16 +1795,19 @@
         }
 
         window.setRankingMode = (mode) => {
-            rankingMode = mode; document.getElementById('btn-rank-abs').className = mode === 'absolute' ? "flex-1 py-1 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition" : "flex-1 py-1 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition";
-            document.getElementById('btn-rank-pct').className = mode === 'percent' ? "flex-1 py-1 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition" : "flex-1 py-1 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition"; updateDailyRanking(); 
+            rankingMode = mode; document.getElementById('btn-rank-abs').className = mode === 'absolute' ? "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition" : "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition";
+            document.getElementById('btn-rank-pct').className = mode === 'percent' ? "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition" : "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition"; updateDailyRanking(); 
         };
         window.setRankingPeriod = (period) => {
-            rankingPeriod = period; ['day', 'week', 'month'].forEach(p => { document.getElementById(`btn-period-${p}`).className = "flex-1 py-1 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition"; });
-            document.getElementById(`btn-period-${period}`).className = "flex-1 py-1 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition"; updateDailyRanking();
+            rankingPeriod = period; ['day', 'week', 'month'].forEach(p => { document.getElementById(`btn-period-${p}`).className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:bg-white/50 transition"; });
+            document.getElementById(`btn-period-${period}`).className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition"; updateDailyRanking();
         };
 
         window.updateDailyRanking = async () => {
-            const selectedDate = document.getElementById('ranking-date').value || getLocalToday(); const listEl = document.getElementById('ranking-list'); const titleEl = document.getElementById('ranking-title');
+            const selectedDate = document.getElementById('ranking-date').value || getLocalToday(); const listEl = document.getElementById('ranking-list');
+            const titleActionsContainer = document.getElementById('ranking-actions-container');
+            const selectedSectorFilter = document.getElementById('ranking-sector-filter') ? document.getElementById('ranking-sector-filter').value : 'all';
+            
             listEl.innerHTML = '<p class="text-center text-gray-400 text-sm py-4"><i class="fas fa-spinner fa-spin"></i> Carregando...</p>';
 
             try {
@@ -1607,26 +1820,22 @@
                 else if (rankingPeriod === 'week') { const range = getWeekRange(selectedDate); start = range.start; end = range.end; rangeLabel = `Semanal (${start.split('-').reverse().slice(0,2).join('/')} a ${end.split('-').reverse().slice(0,2).join('/')})`; } 
                 else { const range = getMonthRange(selectedDate); start = range.start; end = range.end; rangeLabel = `Mensal (${selectedDate.split('-')[1]}/${selectedDate.split('-')[0]})`; }
                 
-                titleEl.innerHTML = `<i class="fas fa-trophy text-yellow-500"></i> Ranking ${rangeLabel} <div class="flex items-center gap-1 ml-2"><button onclick="copyRanking(false)" class="text-gray-400 hover:text-blue-500 text-sm p-1.5 rounded-full hover:bg-gray-100 transition" title="Copiar com Nomes"><i class="far fa-copy"></i></button><button onclick="copyRanking(true)" class="text-gray-400 hover:text-purple-500 text-sm p-1.5 rounded-full hover:bg-gray-100 transition" title="Copiar Anônimo (Ocultar Nomes)"><i class="fas fa-user-secret"></i></button></div>`;
+                document.getElementById('ranking-title').innerHTML = `<i class="fas fa-trophy text-yellow-500 shrink-0"></i> <span class="truncate" title="Ranking ${rangeLabel}">Ranking ${rangeLabel}</span>`;
+                titleActionsContainer.innerHTML = `<button onclick="copyRanking(false)" class="text-gray-400 hover:text-blue-500 text-sm p-1.5 rounded-full hover:bg-gray-100 transition" title="Copiar com Nomes"><i class="far fa-copy"></i></button><button onclick="copyRanking(true)" class="text-gray-400 hover:text-purple-500 text-sm p-1.5 rounded-full hover:bg-gray-100 transition" title="Copiar Anônimo (Ocultar Nomes)"><i class="fas fa-user-secret"></i></button>`;
 
                 if (start === end) q = query(collection(db, "productivity"), where("date", "==", start)); else q = query(collection(db, "productivity"), where("date", ">=", start), where("date", "<=", end));
 
                 const snap = await getDocs(q); const rawData = [];
                 snap.forEach(doc => {
                     const data = doc.data(); 
-                    let uSetor = data.setor;
-                    let uFilial = data.filial;
-
-                    if (!uSetor || !uFilial) { 
-                        const userObj = allCollaborators.find(u => u.matricula === data.matricula); 
-                        uSetor = uSetor || (userObj ? (userObj.setor || DEFAULT_SECTOR) : DEFAULT_SECTOR); 
-                        uFilial = uFilial || (userObj ? (userObj.filial || 'Padrão') : 'Padrão');
-                    }
+                    const userObj = allUsersCache.find(u => u.matricula === data.matricula); 
                     
-                    if (!currentUserData.isMaster) {
-                        if (uFilial !== myFilial) return;
-                        if (uSetor !== mySetor) return;
-                    }
+                    let uSetor = userObj ? (userObj.setor || data.setor) : data.setor;
+                    let uFilial = userObj ? (userObj.filial || data.filial) : data.filial;
+                    
+                    if (!window.canViewData(uFilial, uSetor)) return;
+
+                    if (selectedSectorFilter !== 'all' && !(uSetor || '').split(',').map(s => s.trim().toUpperCase()).includes(selectedSectorFilter.toUpperCase())) return;
                     rawData.push(data);
                 });
 
@@ -1725,7 +1934,7 @@
             const title = document.getElementById('exec-drilldown-title');
             
             modal.classList.remove('hidden');
-            let tableHTML = '<table class="w-full text-left text-sm">';
+            let tableHTML = '<div class="overflow-x-auto"><table class="w-full text-left text-sm whitespace-nowrap min-w-[500px]">';
             
             if(type === 'volume') {
                 title.innerHTML = '<i class="fas fa-boxes text-indigo-500"></i> Detalhamento de Produção';
@@ -1755,14 +1964,14 @@
             }
             else if (type === 'erros') {
                 title.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500"></i> Ofensores de Qualidade';
-                tableHTML += '<thead class="bg-red-100 text-red-800 uppercase text-xs font-bold border-b border-red-200"><tr><th class="p-3">Data</th><th class="p-3">Colaborador</th><th class="p-3">Descrição do Erro</th></tr></thead><tbody class="divide-y divide-gray-100 bg-white">';
+                tableHTML += '<thead class="bg-red-100 text-red-800 uppercase text-xs font-bold border-b border-red-200"><tr><th class="p-3 w-28">Data</th><th class="p-3 w-40">Colaborador</th><th class="p-3">Descrição do Erro</th></tr></thead><tbody class="divide-y divide-gray-100 bg-white">';
                 
                 const errs = window.execDrilldownData.errors.sort((a,b) => b.date.localeCompare(a.date));
                 if(errs.length === 0) tableHTML += '<tr><td colspan="3" class="p-4 text-center text-green-500 font-bold">Parabéns! Nenhuma ocorrência no período.</td></tr>';
                 
                 errs.forEach(e => {
                     let typeBadge = e.type ? `<span class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold mr-1">${e.type}</span>` : '';
-                    tableHTML += `<tr><td class="p-3 text-xs text-gray-500 font-mono">${e.date.split('-').reverse().join('/')}</td><td class="p-3 font-bold text-gray-700">${e.name}</td><td class="p-3 text-sm text-gray-600">${typeBadge} ${e.description}</td></tr>`;
+                    tableHTML += `<tr><td class="p-3 text-xs text-gray-500 font-mono align-top">${e.date.split('-').reverse().join('/')}</td><td class="p-3 font-bold text-gray-700 align-top">${e.name}</td><td class="p-3 text-sm text-gray-600 whitespace-normal break-words align-top">${typeBadge} ${e.description}</td></tr>`;
                 });
             }
             else if (type === 'users') {
@@ -1785,7 +1994,7 @@
                 });
             }
 
-            tableHTML += '</tbody></table>';
+            tableHTML += '</tbody></table></div>';
             content.innerHTML = tableHTML;
         };
 
@@ -1794,6 +2003,8 @@
 
             const monthInput = document.getElementById('exec-month-picker').value;
             const compareInput = document.getElementById('exec-month-compare').value;
+            const selectedSectorFilter = document.getElementById('exec-sector-filter') ? document.getElementById('exec-sector-filter').value : 'all';
+
             if(!monthInput || !compareInput) return showToast("Selecione os dois meses para análise.", true);
 
             const [y, m] = monthInput.split('-');
@@ -1829,16 +2040,14 @@
                     let uFilial = d.filial;
 
                     if (!uSetor || !uFilial) { 
-                        const userObj = allCollaborators.find(u => u.matricula === d.matricula); 
+                        const userObj = allUsersCache.find(u => u.matricula === d.matricula); 
                         uSetor = uSetor || (userObj ? (userObj.setor || DEFAULT_SECTOR) : DEFAULT_SECTOR); 
                         uFilial = uFilial || (userObj ? (userObj.filial || 'Padrão') : 'Padrão');
                     }
                     
-                    if (!currentUserData.isMaster) {
-                        if (uFilial !== myFilial) return;
-                        if (uSetor !== mySetor) return;
-                    }
+                    if (!window.canViewData(uFilial, uSetor)) return;
 
+                    if (selectedSectorFilter !== 'all' && !(uSetor || '').split(',').map(s => s.trim().toUpperCase()).includes(selectedSectorFilter.toUpperCase())) return;
                     const score = d.score || 0;
                     currVol += score; currMeta += (d.meta || 0); currUsers.add(d.matricula);
                     if(!currDays[d.date]) currDays[d.date] = 0; currDays[d.date] += score;
@@ -1853,15 +2062,14 @@
                     let uFilial = d.filial;
 
                     if (!uSetor || !uFilial) { 
-                        const userObj = allCollaborators.find(u => u.matricula === d.matricula); 
+                        const userObj = allUsersCache.find(u => u.matricula === d.matricula); 
                         uSetor = uSetor || (userObj ? (userObj.setor || DEFAULT_SECTOR) : DEFAULT_SECTOR); 
                         uFilial = uFilial || (userObj ? (userObj.filial || 'Padrão') : 'Padrão');
                     }
                     
-                    if (!currentUserData.isMaster) {
-                        if (uFilial !== myFilial) return;
-                        if (uSetor !== mySetor) return;
-                    }
+                    if (!window.canViewData(uFilial, uSetor)) return;
+
+                    if (selectedSectorFilter !== 'all' && !(uSetor || '').split(',').map(s => s.trim().toUpperCase()).includes(selectedSectorFilter.toUpperCase())) return;
 
                     const score = d.score || 0;
                     prevVol += score; prevMeta += (d.meta || 0); prevUsers.add(d.matricula);
@@ -1878,15 +2086,14 @@
                     let uFilial = d.filial;
 
                     if (!uSetor || !uFilial) { 
-                        const userObj = allCollaborators.find(u => u.matricula === d.matricula); 
+                        const userObj = allUsersCache.find(u => u.matricula === d.matricula); 
                         uSetor = uSetor || (userObj ? (userObj.setor || DEFAULT_SECTOR) : DEFAULT_SECTOR); 
                         uFilial = uFilial || (userObj ? (userObj.filial || 'Padrão') : 'Padrão');
                     }
                     
-                    if (!currentUserData.isMaster) {
-                        if (uFilial !== myFilial) return;
-                        if (uSetor !== mySetor) return;
-                    }
+                    if (!window.canViewData(uFilial, uSetor)) return;
+
+                    if (selectedSectorFilter !== 'all' && !(uSetor || '').split(',').map(s => s.trim().toUpperCase()).includes(selectedSectorFilter.toUpperCase())) return;
 
                     currErrCount++;
                     const name = resolveName(d.matricula);
@@ -1904,15 +2111,14 @@
                     let uFilial = d.filial;
 
                     if (!uSetor || !uFilial) { 
-                        const userObj = allCollaborators.find(u => u.matricula === d.matricula); 
+                        const userObj = allUsersCache.find(u => u.matricula === d.matricula); 
                         uSetor = uSetor || (userObj ? (userObj.setor || DEFAULT_SECTOR) : DEFAULT_SECTOR); 
                         uFilial = uFilial || (userObj ? (userObj.filial || 'Padrão') : 'Padrão');
                     }
                     
-                    if (!currentUserData.isMaster) {
-                        if (uFilial !== myFilial) return;
-                        if (uSetor !== mySetor) return;
-                    }
+                    if (!window.canViewData(uFilial, uSetor)) return;
+
+                    if (selectedSectorFilter !== 'all' && !(uSetor || '').split(',').map(s => s.trim().toUpperCase()).includes(selectedSectorFilter.toUpperCase())) return;
 
                     prevErrCount++;
                 });
@@ -2014,7 +2220,7 @@
                 execChart2 = new Chart(document.getElementById('execChartErrors').getContext('2d'), {
                     type: 'bar',
                     data: { 
-                        labels: errorNames.length > 0 ? errorNames.slice(0,5).map(n => n.split(' ')[0]) : ['Sem Divergências'], 
+                        labels: errorNames.length > 0 ? errorNames.slice(0,5).map(n => n.split(' ')[0]) : ['Sem Ocorrências'], 
                         datasets: [{ label: 'Ocorrências', data: errorCounts.length > 0 ? errorCounts.slice(0,5) : [0], backgroundColor: errorCounts.length > 0 ? barColors : ['#E5E7EB'], borderRadius: 6 }] 
                     },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { display: false } } } }
@@ -2049,12 +2255,19 @@
                             
                             if (currentUserData.isMaster) {
                                 document.getElementById('user-role').innerHTML = `<i class="fas fa-crown text-yellow-500 mr-1"></i> Super Admin • Global`;
+                                
+                                const selectSetor = document.getElementById('new-user-setor');
+                                const inputFilial = document.getElementById('new-user-filial');
+                                if(selectSetor) { selectSetor.value = ''; }
+                                if(inputFilial) { inputFilial.value = ''; inputFilial.disabled = false; inputFilial.classList.remove('bg-gray-200', 'cursor-not-allowed'); }
+
                             } else {
                                 document.getElementById('user-role').innerText = `Gestor • ${currentUserData.filial} • ${currentUserData.setor}`;
                                 
                                 const selectSetor = document.getElementById('new-user-setor');
                                 const inputFilial = document.getElementById('new-user-filial');
-                                if(selectSetor) { selectSetor.value = currentUserData.setor; selectSetor.disabled = true; selectSetor.classList.add('bg-gray-200'); }
+                                
+                                if(selectSetor) { selectSetor.value = ''; }
                                 if(inputFilial) { inputFilial.value = currentUserData.filial; inputFilial.disabled = true; inputFilial.classList.add('bg-gray-200', 'cursor-not-allowed'); }
                             }
                             
@@ -2066,7 +2279,8 @@
                                 document.getElementById('tab-executiva').classList.remove('hidden'); 
                             }
 
-                            loadCollaboratorsForSelect(); loadAdminData();
+                            await loadCollaboratorsForSelect(); 
+                            loadAdminData();
                         } else {
                             document.getElementById('colaborador-panel').classList.remove('hidden');
                             document.getElementById('user-role').innerText = `Colab • ${currentUserData.filial} • ${currentUserData.setor}`;
