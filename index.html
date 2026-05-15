@@ -60,7 +60,7 @@
 </head>
 <body class="text-gray-800 antialiased h-screen flex flex-col">
 
-    <!-- Datalist para Setores Dinâmicos (ainda usado em ocorrências e outros locais simples) -->
+    <!-- Datalist para Setores Dinâmicos -->
     <datalist id="datalist-setores"></datalist>
 
     <datalist id="datalist-filiais">
@@ -176,7 +176,7 @@
                         <option value="Outros">Outros</option>
                     </select>
                 </div>
-                <div><label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Valor / Qtd</label><input type="text" id="edit-error-value" class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-red-500" placeholder="Ex: 50,00"></div>
+                <div><label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Quantidade</label><input type="text" id="edit-error-value" class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-red-500" placeholder="Ex: 5"></div>
                 <div>
                     <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Setor</label>
                     <input type="text" id="edit-error-sector" list="datalist-setores" class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-red-500 bg-white" placeholder="Selecione ou digite">
@@ -380,7 +380,7 @@
                                         <option value="all">Todos Setores</option>
                                     </select>
                                     <input type="date" id="ranking-date" onchange="updateDailyRanking()" class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 flex-1 w-[110px]">
-                                    <button onclick="updateDailyRanking()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 w-8 h-[34px] flex items-center justify-center rounded-lg transition shrink-0" title="Forçar Atualização"><i class="fas fa-sync-alt text-xs"></i></button>
+                                    <button onclick="updateDailyRanking()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 w-8 h-[34px] flex items-center justify-center rounded-lg transition shrink-0" title="For Atualização"><i class="fas fa-sync-alt text-xs"></i></button>
                                 </div>
                                 <div class="flex bg-gray-100 p-1 rounded-lg mt-1 w-full">
                                     <button onclick="setRankingPeriod('day')" id="btn-period-day" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow text-blue-600 transition">Dia</button>
@@ -402,6 +402,12 @@
                         <h3 class="font-bold text-gray-800 text-lg mb-6 flex items-center gap-2"><i class="fas fa-file-pdf text-purple-600"></i> Gerador de Relatórios</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-4">
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Setor (Opcional)</label>
+                                    <select id="report-sector" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                                        <option value="all">Todos os Setores</option>
+                                    </select>
+                                </div>
                                 <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Colaborador (Opcional)</label><select id="report-matricula" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-purple-500 bg-white"><option value="">Todos</option></select></div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">De</label><input type="date" id="report-start" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-purple-500"></div>
@@ -445,7 +451,7 @@
                                             <option value="Outros">Outros</option>
                                         </select>
                                     </div>
-                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Valor / Qtd</label><input type="text" id="error-value" placeholder="Ex: 50,00" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-red-500"></div>
+                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Quantidade</label><input type="text" id="error-value" placeholder="Ex: 5" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-red-500"></div>
                                 </div>
 
                                 <div>
@@ -472,7 +478,7 @@
                                         <tr>
                                             <th class="p-4">Data / Colab.</th>
                                             <th class="p-4">Tipo</th>
-                                            <th class="p-4">Valor/Qtd</th>
+                                            <th class="p-4">Qtd</th>
                                             <th class="p-4">Obs</th>
                                             <th class="p-4 text-right">Ação</th>
                                         </tr>
@@ -863,6 +869,7 @@
 
             setupFilter(document.getElementById('ranking-sector-filter'));
             setupFilter(document.getElementById('exec-sector-filter'));
+            setupFilter(document.getElementById('report-sector'));
 
             // Construir as opções dos checkboxes de multi-seleção
             const renderCheckboxes = (dropdownId, displayId, hiddenInputId) => {
@@ -998,7 +1005,7 @@
 
                 recentErrors.forEach(e => {
                     let typeBadge = e.type ? `<span class="bg-amber-200 text-amber-800 px-1 py-0.5 rounded ml-2 text-[9px] uppercase font-bold">${e.type}</span>` : '';
-                    let valInfo = e.value ? ` (R$ ${e.value})` : '';
+                    let valInfo = e.value ? ` (Qtd: ${e.value})` : '';
                     errHtml += `<div class="p-5 rounded-xl border bg-amber-900/10 border-amber-800/30"><div class="flex justify-between items-start mb-2"><div class="flex items-center gap-2"><i class="fas fa-exclamation-triangle text-amber-500"></i><h3 class="font-semibold text-sm text-amber-400">Ocorrência Registrada ${typeBadge}</h3></div><span class="text-xs text-slate-500">${e.date.split('-').reverse().join('/')}</span></div><p class="text-sm text-slate-300 mb-2 leading-relaxed"><b>${e.type || 'Ocorrência'}${valInfo}:</b> ${e.description || 'Sem detalhes'}</p></div>`;
                 });
                 
@@ -1388,70 +1395,6 @@
             } catch(e) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-red-400">Erro.</td></tr>'; }
         };
 
-        window.deleteUser = (uid, nome, setor, role) => {
-            if (uid === currentUserData.uid) return showToast("Você não pode excluir sua própria conta.", true);
-            let confirmMsg = role === 'admin' ? `ATENÇÃO: Você vai remover o gestor ${nome}. O histórico do setor "${setor}" NÃO será apagado. Deseja confirmar?` : `Tem certeza que deseja remover ${nome}?`;
-            window.customConfirm(confirmMsg, async () => {
-                try { await deleteDoc(doc(db, "users", uid)); await logSystemAction('Exclusão de Usuário', nome, `Removeu o usuário do sistema`); showToast("Usuário removido com sucesso."); loadTeamList(); } catch(e) { showToast("Erro ao excluir.", true); }
-            });
-        };
-
-        window.deleteProductivity = (id) => {
-            window.customConfirm("Excluir este lançamento?", async () => {
-                try { await deleteDoc(doc(db, "productivity", id)); await logSystemAction('Exclusão', `Prod ID: ${id}`, `Excluiu lançamento`); showToast("Lançamento excluído."); loadAdminData(); } catch(e) { showToast("Erro ao excluir.", true); }
-            });
-        };
-
-        window.saveProductivity = async (e) => {
-            e.preventDefault(); const d = document.getElementById('input-date').value; const matricula = document.getElementById('input-matricula').value; const s = parsePtBrNumber(document.getElementById('input-score').value); const inputMetaRaw = document.getElementById('input-meta').value;
-            if(!matricula) return showToast("Selecione um colaborador", true);
-
-            try {
-                let finalMeta = 0; let userSetor = DEFAULT_SECTOR; let userFilial = 'Padrão';
-                const userObj = allUsersCache.find(u => u.matricula === matricula);
-                if (userObj) {
-                    if (inputMetaRaw && inputMetaRaw !== "") finalMeta = parsePtBrNumber(inputMetaRaw);
-                    else { finalMeta = userObj.meta || 0; if (d && new Date(d + 'T00:00:00').getDay() === 6) finalMeta = finalMeta * APP_CONFIG.fatorSabado; }
-                    userSetor = userObj.setor || DEFAULT_SECTOR;
-                    userFilial = userObj.filial || 'Padrão';
-                }
-
-                const q = query(collection(db, "productivity"), where("matricula", "==", matricula), where("date", "==", d)); const snap = await getDocs(q);
-                let action = '';
-                if (!snap.empty) { await updateDoc(doc(db, "productivity", snap.docs[0].id), { score: s, meta: finalMeta, setor: userSetor, filial: userFilial, timestamp: serverTimestamp() }); action = 'Atualizou'; } 
-                else { await addDoc(collection(db, "productivity"), { date: d, matricula: matricula, score: s, meta: finalMeta, setor: userSetor, filial: userFilial, registeredBy: currentUserData.uid, timestamp: serverTimestamp() }); action = 'Criou'; }
-                
-                await logSystemAction('Lançamento', matricula, `${action} registro. Score: ${formatNumber(s)}`); showToast(`Lançamento salvo!`);
-                document.getElementById('input-score').value = ''; document.getElementById('input-meta').value = ''; clearProdSearch(); document.getElementById('ranking-date').value = d; loadAdminData();
-            } catch(err) { showToast("Erro ao salvar", true); }
-        };
-
-        async function loadAdminData() {
-            try {
-                const q = query(collection(db, "productivity"), orderBy("timestamp", "desc"), limit(100)); const snap = await getDocs(q);
-                allProductivityData = []; 
-                const mySetor = currentUserData.setor || DEFAULT_SECTOR;
-                const myFilial = currentUserData.filial || 'Padrão';
-
-                snap.forEach(d => {
-                    const data = { id: d.id, ...d.data() }; 
-                    let uSetor = data.setor;
-                    let uFilial = data.filial;
-
-                    if (!uSetor || !uFilial) { 
-                        const userObj = allUsersCache.find(u => u.matricula === data.matricula); 
-                        uSetor = uSetor || (userObj ? (userObj.setor || DEFAULT_SECTOR) : DEFAULT_SECTOR); 
-                        uFilial = uFilial || (userObj ? (userObj.filial || 'Padrão') : 'Padrão');
-                    }
-                    
-                    if (!window.canViewData(uFilial, uSetor)) return;
-                    
-                    allProductivityData.push(data);
-                });
-                renderHistoryTable(allProductivityData.slice(0, 20)); window.updateDailyRanking(); 
-            } catch (err) {}
-        }
-
         window.setReportDate = (type) => {
             const today = new Date(); const formatDate = (d) => d.toISOString().split('T')[0];
             if (type === 'today') { document.getElementById('report-start').value = formatDate(today); document.getElementById('report-end').value = formatDate(today); } 
@@ -1462,7 +1405,11 @@
         window.closePreviewReport = () => { document.getElementById('preview-report-modal').classList.add('hidden'); };
 
         async function fetchReportData() { 
-             const start = document.getElementById('report-start').value; const end = document.getElementById('report-end').value; const mat = document.getElementById('report-matricula').value;
+             const start = document.getElementById('report-start').value; 
+             const end = document.getElementById('report-end').value; 
+             const mat = document.getElementById('report-matricula').value;
+             const selectedSector = document.getElementById('report-sector').value;
+
              if (!start || !end) { showToast("Defina as datas.", true); return null; }
              
              let q = query(collection(db, "productivity"), where("date", ">=", start), where("date", "<=", end));
@@ -1484,6 +1431,11 @@
                  }
                  
                  if (!window.canViewData(uFilial, uSetor)) return;
+
+                 if (selectedSector !== 'all') {
+                     const rowSectors = (uSetor || '').toUpperCase().split(',').map(s => s.trim());
+                     if (!rowSectors.includes(selectedSector.toUpperCase())) return;
+                 }
                  
                  data.push(row);
              });
@@ -1671,7 +1623,7 @@
                                 <span class="px-2 py-1 rounded-md text-[10px] font-black uppercase ${typeClass}">${data.type || 'Outros'}</span>
                             </td>
                             <td class="p-4 font-mono font-bold text-gray-600 whitespace-nowrap">
-                                ${data.value ? 'R$ ' + data.value : '---'}
+                                ${data.value ? data.value : '---'}
                             </td>
                             <td class="p-4 max-w-xs whitespace-normal min-w-[200px]">
                                 <div class="text-xs text-gray-600 italic break-words">
@@ -1779,7 +1731,7 @@
 
                     let errHtml = ''; errorsList.forEach(err => { 
                         let typeBadge = err.type ? `<span class="bg-red-200 text-red-800 px-1 py-0.5 rounded ml-2 text-[9px]">${err.type}</span>` : '';
-                        let valInfo = err.value ? ` (R$ ${err.value})` : '';
+                        let valInfo = err.value ? ` (Qtd: ${err.value})` : '';
                         errHtml += `<div class="bg-red-50 p-3 rounded-lg border-l-4 border-red-500"><p class="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1"><i class="far fa-calendar"></i> ${err.date.split('-').reverse().join('/')} ${typeBadge}</p><p class="text-sm text-gray-800 mt-1 font-medium leading-snug">${err.type || 'Ocorrência'}${valInfo}: ${err.description || 'Sem detalhes'}</p></div>`; 
                     });
                     listErrors.innerHTML = errHtml; document.getElementById('error-card-container').classList.add('border-red-200', 'shadow-md');
@@ -2082,7 +2034,7 @@
 
                 snapErrCurr.forEach(doc => {
                     const d = doc.data();
-                    let uSetor = d.setor;
+                    let uSetor = d.sector || d.userSetor || d.setor;
                     let uFilial = d.filial;
 
                     if (!uSetor || !uFilial) { 
@@ -2107,7 +2059,7 @@
 
                 snapErrPrev.forEach(doc => {
                     const d = doc.data();
-                    let uSetor = d.setor;
+                    let uSetor = d.sector || d.userSetor || d.setor;
                     let uFilial = d.filial;
 
                     if (!uSetor || !uFilial) { 
@@ -2256,13 +2208,23 @@
                             if (currentUserData.isMaster) {
                                 document.getElementById('user-role').innerHTML = `<i class="fas fa-crown text-yellow-500 mr-1"></i> Super Admin • Global`;
                                 
+                                const execTitleH3 = document.querySelector('#view-executiva h3');
+                                const execSubtitle = document.querySelector('#view-executiva p.text-sm');
+                                if(execTitleH3) execTitleH3.innerHTML = '<i class="fas fa-chart-bar text-indigo-600"></i> Visão Executiva Global';
+                                if(execSubtitle) execSubtitle.innerText = 'Análise de Tendência, Performance e Ofensores de Qualidade de toda a rede.';
+                                
                                 const selectSetor = document.getElementById('new-user-setor');
                                 const inputFilial = document.getElementById('new-user-filial');
+                                
                                 if(selectSetor) { selectSetor.value = ''; }
                                 if(inputFilial) { inputFilial.value = ''; inputFilial.disabled = false; inputFilial.classList.remove('bg-gray-200', 'cursor-not-allowed'); }
-
                             } else {
                                 document.getElementById('user-role').innerText = `Gestor • ${currentUserData.filial} • ${currentUserData.setor}`;
+                                
+                                const execTitleH3 = document.querySelector('#view-executiva h3');
+                                const execSubtitle = document.querySelector('#view-executiva p.text-sm');
+                                if(execTitleH3) execTitleH3.innerHTML = '<i class="fas fa-chart-bar text-indigo-600"></i> Visão Gerencial da Equipe';
+                                if(execSubtitle) execSubtitle.innerText = `Análise de Tendência, Performance e Ofensores - Loja: ${currentUserData.filial} | Setor: ${currentUserData.setor}`;
                                 
                                 const selectSetor = document.getElementById('new-user-setor');
                                 const inputFilial = document.getElementById('new-user-filial');
@@ -2287,7 +2249,10 @@
                             loadColabData();
                         }
                     } else { signOut(auth); setLoading(document.getElementById('btn-login'), false); }
-                } catch (e) { signOut(auth); setLoading(document.getElementById('btn-login'), false); }
+                } catch (e) {
+                    console.error("Erro no carregamento do painel:", e);
+                    setLoading(document.getElementById('btn-login'), false);
+                }
             } else {
                 document.getElementById('dashboard').classList.add('hidden'); document.getElementById('login-screen').classList.remove('hidden'); setLoading(document.getElementById('btn-login'), false);
             }
