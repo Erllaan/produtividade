@@ -128,7 +128,10 @@
                 </div>
                 <div>
                     <label class="text-xs font-bold text-gray-500 uppercase ml-1">Tipo de Conta</label>
-                    <select id="edit-role" class="w-full border p-3 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"><option value="colaborador">Colaborador</option><option value="admin">Gestor</option></select>
+                    <select id="edit-role" class="w-full border p-3 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="colaborador">Colaborador</option>
+                        <option value="admin">Gestor</option>
+                    </select>
                 </div>
                 <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Filial / Loja</label><input type="text" id="edit-filial" list="datalist-filiais" class="w-full border p-3 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500" placeholder="Selecione ou digite"></div>
                 
@@ -289,8 +292,43 @@
 
     <!-- Modal Feedback Mode -->
     <div id="feedback-mode-modal" class="fixed inset-0 bg-slate-900 text-slate-100 hidden z-[60] overflow-y-auto font-sans selection:bg-blue-500/30">
-        <header class="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 md:px-8 py-4 flex justify-between items-center"><div class="flex items-center gap-4"><div class="w-12 h-12 rounded-full ring-2 ring-blue-500/50 bg-slate-800 flex items-center justify-center text-xl font-bold text-blue-400" id="fb-user-initial">A</div><div><h1 class="text-xl font-bold text-white" id="fb-user-name">Carregando...</h1><p class="text-sm text-blue-400 font-medium" id="fb-user-role">...</p></div></div><div class="flex items-center gap-6"><div class="text-right hidden sm:block"><p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Data da Revisão</p><p class="text-sm text-slate-200 flex items-center gap-1 justify-end mt-0.5" id="fb-current-date">...</p></div><button onclick="closeFeedbackMode()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700"><i class="fas fa-times"></i> Encerrar</button></div></header>
-        <main class="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 pb-20"><div class="lg:col-span-4 space-y-6"><section class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50 relative overflow-hidden"><h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2"><i class="fas fa-chart-line text-blue-400"></i> Andamento do Mês</h2><div class="space-y-6" id="fb-metrics-container"></div></section><div class="bg-blue-900/20 border border-blue-800/50 rounded-xl p-5 text-sm text-blue-200"><p><strong>💡 Dica de Feedback:</strong> Comece revisando os pontos fortes e as entregas recentes antes de abordar as ocorrências de melhoria.</p></div></div><div class="lg:col-span-4"><section class="h-full bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30"><h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2"><i class="fas fa-bullseye text-purple-400"></i> Últimos Lançamentos</h2><div class="relative border-l-2 border-slate-700 ml-3 py-2 space-y-8" id="fb-history-list"></div></section></div><div class="lg:col-span-4 space-y-4"><h2 class="text-lg font-semibold text-white mb-2 flex items-center gap-2 px-2"><i class="fas fa-file-alt text-emerald-400"></i> Ocorrências e Elogios</h2><div id="fb-occurrences-list" class="space-y-4"></div></div></main>
+        <header class="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 md:px-8 py-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full ring-2 ring-blue-500/50 bg-slate-800 flex items-center justify-center text-xl font-bold text-blue-400 shrink-0" id="fb-user-initial">A</div>
+                <div>
+                    <h1 class="text-xl font-bold text-white truncate max-w-[200px] sm:max-w-xs" id="fb-user-name">Carregando...</h1>
+                    <p class="text-sm text-blue-400 font-medium" id="fb-user-role">...</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700 w-full lg:w-auto">
+                <select id="fb-quick-date" onchange="setFeedbackDate(this.value)" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded p-1.5 outline-none focus:ring-1 focus:ring-blue-500">
+                    <option value="month">Este Mês</option>
+                    <option value="15days">Últimos 15 Dias</option>
+                    <option value="week">Esta Semana</option>
+                    <option value="custom">Personalizado</option>
+                </select>
+                <div class="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded px-2">
+                    <input type="date" id="fb-date-start" onchange="document.getElementById('fb-quick-date').value='custom'" class="bg-transparent text-slate-300 text-xs py-1.5 outline-none w-[105px]">
+                    <span class="text-slate-500 text-[10px] uppercase font-bold">até</span>
+                    <input type="date" id="fb-date-end" onchange="document.getElementById('fb-quick-date').value='custom'" class="bg-transparent text-slate-300 text-xs py-1.5 outline-none w-[105px]">
+                </div>
+                <button onclick="refreshFeedbackData()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-1 shadow-md ml-auto lg:ml-0">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+            </div>
+
+            <div class="flex items-center gap-6 w-full lg:w-auto justify-end">
+                <div class="text-right hidden sm:block">
+                    <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Data da Revisão</p>
+                    <p class="text-sm text-slate-200 flex items-center gap-1 justify-end mt-0.5" id="fb-current-date">...</p>
+                </div>
+                <button onclick="closeFeedbackMode()" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700 w-full lg:w-auto">
+                    <i class="fas fa-times"></i> Encerrar
+                </button>
+            </div>
+        </header>
+        <main class="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 pb-20"><div class="lg:col-span-4 space-y-6"><section class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50 relative overflow-hidden"><h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2"><i class="fas fa-chart-line text-blue-400"></i> Andamento do Período</h2><div class="space-y-6" id="fb-metrics-container"></div></section><div class="bg-blue-900/20 border border-blue-800/50 rounded-xl p-5 text-sm text-blue-200"><p><strong>💡 Dica de Feedback:</strong> Comece revisando os pontos fortes e as entregas recentes antes de abordar as ocorrências de melhoria.</p></div></div><div class="lg:col-span-4"><section class="h-full bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30"><h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2"><i class="fas fa-bullseye text-purple-400"></i> Últimos Lançamentos</h2><div class="relative border-l-2 border-slate-700 ml-3 py-2 space-y-8" id="fb-history-list"></div></section></div><div class="lg:col-span-4 space-y-4"><h2 class="text-lg font-semibold text-white mb-2 flex items-center gap-2 px-2"><i class="fas fa-file-alt text-emerald-400"></i> Ocorrências e Elogios</h2><div id="fb-occurrences-list" class="space-y-4"></div></div></main>
     </div>
 
     <!-- Interface Principal do Dashboard -->
@@ -503,7 +541,9 @@
                             <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Login</label><input type="text" id="new-user-login" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Matrícula (ex: 1234)"></div>
                             <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Tipo de Conta</label>
                                 <select id="new-user-role" onchange="updateLoginPlaceholder()" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                                    <option value="colaborador">Colaborador</option><option value="admin">Gestor</option>
+                                    <option value="colaborador">Colaborador</option>
+                                    <option value="admin">Gestor</option>
+                                    <!-- A opção Super Admin será inserida aqui via JS se o usuário logado for Master -->
                                 </select>
                             </div>
                             <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Filial / Loja</label><input type="text" id="new-user-filial" list="datalist-filiais" class="w-full border rounded-lg p-2.5 mt-1 outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Selecione ou digite"></div>
@@ -550,6 +590,7 @@
                                     <option value="Cadastro">Apenas Cadastros</option>
                                     <option value="Edição">Apenas Edições</option>
                                     <option value="Exclusão">Apenas Exclusões</option>
+                                    <option value="Ocorrência">Ocorrências Registradas</option>
                                 </select>
                                 <button onclick="loadAuditLogs()" class="bg-indigo-50 text-indigo-600 font-bold hover:bg-indigo-100 px-4 py-2.5 rounded-lg transition text-sm flex items-center gap-2"><i class="fas fa-sync"></i> Atualizar</button>
                             </div>
@@ -763,6 +804,7 @@
         const DEFAULT_SECTOR = APP_CONFIG.setores[0];
 
         let currentUserData = null;
+        let currentFeedbackMatricula = null;
         let myChart = null; let previewChart1 = null; let previewChart2 = null;
         let execChart1 = null; let execChart2 = null; let execChart3 = null; 
         
@@ -937,26 +979,71 @@
             if (ratio >= 1.0) return 'bg-green-100 text-green-700'; if (ratio >= 0.85) return 'bg-yellow-100 text-yellow-700'; return 'bg-red-100 text-red-700';
         }
 
-        window.closeFeedbackMode = () => { document.getElementById('feedback-mode-modal').classList.add('hidden'); };
+        window.closeFeedbackMode = () => { document.getElementById('feedback-mode-modal').classList.add('hidden'); currentFeedbackMatricula = null; };
+        
+        window.setFeedbackDate = (type) => {
+            const today = new Date();
+            const formatDate = (d) => d.toISOString().split('T')[0];
+            let start, end;
+            
+            if (type === 'week') {
+                const day = today.getDay();
+                const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+                const first = new Date(today.setDate(diff));
+                start = formatDate(first);
+                end = formatDate(new Date(first.getTime() + 6 * 24 * 60 * 60 * 1000));
+            } else if (type === '15days') {
+                const past15 = new Date();
+                past15.setDate(today.getDate() - 15);
+                start = formatDate(past15);
+                end = formatDate(new Date());
+            } else if (type === 'month') {
+                start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+                end = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+            } else {
+                return; // custom (mantem o que foi digitado)
+            }
+            
+            document.getElementById('fb-date-start').value = start;
+            document.getElementById('fb-date-end').value = end;
+            refreshFeedbackData();
+        };
+
         window.openFeedbackMode = async (matricula) => { 
+            currentFeedbackMatricula = matricula;
             const user = allUsersCache.find(u => u.matricula === matricula) || allCollaborators.find(u => u.matricula === matricula);
             if (!user) return showToast("Usuário não encontrado.", true);
 
             document.getElementById('fb-user-name').innerText = user.nome;
-            document.getElementById('fb-user-role').innerText = `${user.role === 'admin' ? 'Gestor' : 'Colaborador'} • ${user.setor || DEFAULT_SECTOR}`;
+            document.getElementById('fb-user-role').innerText = `${user.role === 'admin' || user.role === 'master' ? 'Gestor' : 'Colaborador'} • ${user.setor || DEFAULT_SECTOR}`;
             document.getElementById('fb-user-initial').innerText = user.nome.charAt(0).toUpperCase();
             document.getElementById('fb-current-date').innerText = new Date().toLocaleDateString('pt-BR');
 
+            // Define "Este Mês" por padrão ao abrir
+            document.getElementById('fb-quick-date').value = 'month';
+            const now = new Date();
+            document.getElementById('fb-date-start').value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            document.getElementById('fb-date-end').value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
             document.getElementById('feedback-mode-modal').classList.remove('hidden');
+            
+            await refreshFeedbackData();
+        };
+
+        window.refreshFeedbackData = async () => {
+            if(!currentFeedbackMatricula) return;
+            const matricula = currentFeedbackMatricula;
+            const start = document.getElementById('fb-date-start').value;
+            const end = document.getElementById('fb-date-end').value;
+
+            if(!start || !end) return showToast("Defina as datas para a análise.", true);
+
             document.getElementById('fb-metrics-container').innerHTML = '<p class="text-slate-400 text-sm"><i class="fas fa-spinner fa-spin"></i> Calculando métricas...</p>';
             document.getElementById('fb-history-list').innerHTML = '<p class="text-slate-400 text-sm"><i class="fas fa-spinner fa-spin"></i> Buscando histórico...</p>';
             document.getElementById('fb-occurrences-list').innerHTML = '<p class="text-slate-400 text-sm"><i class="fas fa-spinner fa-spin"></i> Analisando registros...</p>';
 
             try {
-                const now = new Date();
-                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-                const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-
+                // Productivity - Corrigido para não usar query composta no Firebase e filtrar as datas via JS
                 const qProd = query(collection(db, "productivity"), where("matricula", "==", matricula));
                 const snapProd = await getDocs(qProd);
 
@@ -965,7 +1052,7 @@
 
                 snapProd.forEach(doc => {
                     const d = doc.data(); 
-                    if (d.date >= startOfMonth && d.date <= endOfMonth) {
+                    if (d.date >= start && d.date <= end) {
                         totalScore += d.score || 0; totalMeta += d.meta || 0;
                         if (d.meta > 0 && d.score >= d.meta) goalsCompleted++;
                         historyData.push(d);
@@ -976,14 +1063,14 @@
                 if (totalMeta > 0) perfScore = Math.min(100, Math.round((totalScore / totalMeta) * 100)); else if (totalDays > 0) perfScore = 100;
 
                 document.getElementById('fb-metrics-container').innerHTML = `
-                    <div><div class="flex justify-between items-end mb-2"><span class="text-sm text-slate-400">Score do Mês Atual</span><span class="text-3xl font-bold text-white">${perfScore}<span class="text-lg text-slate-500">/100</span></span></div><div class="w-full bg-slate-700 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${perfScore}%"></div></div></div>
+                    <div><div class="flex justify-between items-end mb-2"><span class="text-sm text-slate-400">Atingimento no Período</span><span class="text-3xl font-bold text-white">${perfScore}<span class="text-lg text-slate-500">/100</span></span></div><div class="w-full bg-slate-700 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${perfScore}%"></div></div></div>
                     <div class="pt-4 border-t border-slate-700/50"><div class="flex justify-between items-end mb-2"><span class="text-sm text-slate-400">Dias com Meta Batida</span><span class="text-xl font-bold text-white">${goalsCompleted} <span class="text-sm text-slate-500 font-normal">de ${totalDays} dias lançados</span></span></div><div class="w-full bg-slate-700 rounded-full h-2.5"><div class="bg-emerald-500 h-2.5 rounded-full" style="width: ${totalDays > 0 ? (goalsCompleted / totalDays) * 100 : 0}%"></div></div></div>
                 `;
 
                 historyData.sort((a,b) => b.date.localeCompare(a.date));
                 const recentHistory = historyData.slice(0, 5);
                 let histHtml = '';
-                if (recentHistory.length === 0) histHtml = '<p class="text-sm text-slate-400">Nenhum lançamento recente neste mês.</p>';
+                if (recentHistory.length === 0) histHtml = '<p class="text-sm text-slate-400">Nenhum lançamento no período.</p>';
                 else {
                     recentHistory.forEach(h => {
                         const hit = h.meta > 0 && h.score >= h.meta; const iconColor = hit ? 'text-emerald-500' : 'text-amber-500'; const bgColor = hit ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'; const title = hit ? 'Meta Batida' : 'Abaixo da Meta';
@@ -992,16 +1079,23 @@
                 }
                 document.getElementById('fb-history-list').innerHTML = histHtml;
 
+                // Errors / Occurrences - Corrigido para não usar query composta no Firebase e filtrar as datas via JS
                 const qErr = query(collection(db, "errors"), where("matricula", "==", matricula));
                 const snapErr = await getDocs(qErr);
                 
                 let allErrors = [];
-                snapErr.forEach(doc => allErrors.push(doc.data()));
+                snapErr.forEach(doc => {
+                    const d = doc.data();
+                    if (d.date >= start && d.date <= end) {
+                        allErrors.push(d);
+                    }
+                });
+                
                 allErrors.sort((a, b) => b.date.localeCompare(a.date));
-                const recentErrors = allErrors.slice(0, 5);
+                const recentErrors = allErrors.slice(0, 10); // Carrega os 10 últimos do período filtrado
 
                 let errHtml = '';
-                if (perfScore >= 100 && recentErrors.length === 0 && totalDays > 0) errHtml += `<div class="p-5 rounded-xl border bg-emerald-900/10 border-emerald-800/30"><div class="flex justify-between items-start mb-2"><div class="flex items-center gap-2"><i class="fas fa-star text-emerald-500"></i><h3 class="font-semibold text-sm text-emerald-400">Excelente Desempenho</h3></div></div><p class="text-sm text-slate-300 mb-2">O colaborador está com uma performance perfeita (100% ou mais) neste mês e com ótima qualidade de entrega.</p></div>`;
+                if (perfScore >= 100 && recentErrors.length === 0 && totalDays > 0) errHtml += `<div class="p-5 rounded-xl border bg-emerald-900/10 border-emerald-800/30"><div class="flex justify-between items-start mb-2"><div class="flex items-center gap-2"><i class="fas fa-star text-emerald-500"></i><h3 class="font-semibold text-sm text-emerald-400">Excelente Desempenho</h3></div></div><p class="text-sm text-slate-300 mb-2">O colaborador está com uma performance perfeita no período (100% ou mais) e com ótima qualidade de entrega.</p></div>`;
 
                 recentErrors.forEach(e => {
                     let typeBadge = e.type ? `<span class="bg-amber-200 text-amber-800 px-1 py-0.5 rounded ml-2 text-[9px] uppercase font-bold">${e.type}</span>` : '';
@@ -1009,9 +1103,13 @@
                     errHtml += `<div class="p-5 rounded-xl border bg-amber-900/10 border-amber-800/30"><div class="flex justify-between items-start mb-2"><div class="flex items-center gap-2"><i class="fas fa-exclamation-triangle text-amber-500"></i><h3 class="font-semibold text-sm text-amber-400">Ocorrência Registrada ${typeBadge}</h3></div><span class="text-xs text-slate-500">${e.date.split('-').reverse().join('/')}</span></div><p class="text-sm text-slate-300 mb-2 leading-relaxed"><b>${e.type || 'Ocorrência'}${valInfo}:</b> ${e.description || 'Sem detalhes'}</p></div>`;
                 });
                 
-                if (errHtml === '') errHtml = '<p class="text-sm text-slate-400 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">Nenhuma ocorrência ou registro especial encontrado.</p>';
+                if (errHtml === '') errHtml = '<p class="text-sm text-slate-400 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">Nenhuma ocorrência ou registro especial encontrado no período.</p>';
                 document.getElementById('fb-occurrences-list').innerHTML = errHtml;
-            } catch (e) { showToast("Erro ao carregar os dados.", true); closeFeedbackMode(); }
+            } catch (e) { 
+                console.error("Erro feedback:", e);
+                showToast("Erro ao carregar os dados do feedback.", true); 
+                closeFeedbackMode(); 
+            }
         };
 
         window.toggleBatchMetaModal = () => { document.getElementById('batch-meta-modal').classList.toggle('hidden'); selectedCollaborators = []; updateBatchSelectionUI(); };
@@ -1069,6 +1167,94 @@
             document.getElementById('input-meta').value = ''; document.getElementById('prod-colab-search').focus();
         };
 
+        window.saveProductivity = async (e) => {
+            e.preventDefault();
+            const mat = document.getElementById('input-matricula').value;
+            const date = document.getElementById('input-date').value;
+            const score = parsePtBrNumber(document.getElementById('input-score').value);
+            const meta = parsePtBrNumber(document.getElementById('input-meta').value);
+            
+            if (!mat) return showToast("Selecione um colaborador da lista.", true);
+            
+            const btn = document.querySelector('form button[type="submit"]');
+            const oldText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+            btn.disabled = true;
+
+            try {
+                const userObj = allUsersCache.find(u => u.matricula === mat);
+                const userSetor = userObj ? (userObj.setor || DEFAULT_SECTOR) : DEFAULT_SECTOR;
+                const userFilial = userObj ? (userObj.filial || 'Padrão') : 'Padrão';
+
+                await addDoc(collection(db, "productivity"), {
+                    matricula: mat, date: date, score: score, meta: meta,
+                    setor: userSetor, filial: userFilial,
+                    registeredBy: currentUserData.uid, timestamp: serverTimestamp()
+                });
+
+                await logSystemAction('Cadastro', mat, `Lançamento de produção: ${formatNumber(score)} (Meta: ${formatNumber(meta)})`);
+                showToast("Lançamento salvo com sucesso!");
+                
+                document.getElementById('input-score').value = '';
+                document.getElementById('input-date').value = getLocalToday();
+                clearProdSearch();
+                
+                loadAdminData();
+                if(date === document.getElementById('ranking-date').value) updateDailyRanking();
+            } catch (error) {
+                console.error(error); showToast("Erro ao salvar.", true);
+            } finally {
+                btn.innerHTML = oldText; btn.disabled = false;
+            }
+        };
+
+        window.loadAdminData = async () => {
+            const tb = document.getElementById('admin-history-body');
+            if (!tb) return;
+            tb.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i> Carregando...</td></tr>';
+            try {
+                const q = query(collection(db, "productivity"), orderBy("timestamp", "desc"), limit(100));
+                const snap = await getDocs(q);
+                allProductivityData = [];
+                
+                snap.forEach(doc => {
+                    const data = doc.data(); data.id = doc.id;
+                    let uSetor = data.setor; let uFilial = data.filial;
+                    if (!uSetor || !uFilial) {
+                        const userObj = allUsersCache.find(u => u.matricula === data.matricula);
+                        uSetor = uSetor || (userObj ? (userObj.setor || DEFAULT_SECTOR) : DEFAULT_SECTOR);
+                        uFilial = uFilial || (userObj ? (userObj.filial || 'Padrão') : 'Padrão');
+                    }
+                    if (window.canViewData(uFilial, uSetor)) allProductivityData.push(data);
+                });
+                filterHistory();
+            } catch (error) {
+                console.error(error); tb.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-400">Erro ao carregar dados.</td></tr>';
+            }
+        };
+
+        window.deleteProductivity = (id) => {
+            window.customConfirm("Deseja excluir permanentemente este lançamento?", async () => {
+                try {
+                    const record = allProductivityData.find(r => r.id === id);
+                    await deleteDoc(doc(db, "productivity", id));
+                    if(record) await logSystemAction('Exclusão', record.matricula, `Excluiu lançamento (${formatNumber(record.score)})`);
+                    else await logSystemAction('Exclusão', 'Lançamento', `Excluiu lançamento ID: ${id}`);
+                    showToast("Lançamento removido."); loadAdminData(); updateDailyRanking();
+                } catch (e) { console.error(e); showToast("Erro ao excluir.", true); }
+            });
+        };
+
+        window.deleteUser = (id, nome, setor, role) => {
+            window.customConfirm(`Deseja excluir o usuário ${nome}? (Obs: o histórico já lançado será mantido)`, async () => {
+                try {
+                    await deleteDoc(doc(db, "users", id));
+                    await logSystemAction('Exclusão', nome, `Excluiu usuário (Setor: ${setor}, Perfil: ${role})`);
+                    showToast("Usuário removido da equipe."); loadTeamList();
+                } catch (e) { console.error(e); showToast("Erro ao excluir usuário.", true); }
+            });
+        };
+
         async function logSystemAction(action, target, details) {
             if(!currentUserData) return;
             try { await addDoc(collection(db, "audit_logs"), { adminId: currentUserData.uid, adminName: currentUserData.nome, action: action, target: target || "Sistema", details: details || "", timestamp: serverTimestamp() }); } catch(e) { console.error(e); }
@@ -1091,31 +1277,42 @@
                 let html = ''; let count = 0;
                 snap.forEach(doc => {
                     const data = doc.data();
-                    if (filterAction && !data.action.includes(filterAction)) return;
+                    
+                    // Tratativa de segurança caso algum log antigo não tenha propriedades preenchidas
+                    const actionStr = data.action || "Sem Ação";
+                    const adminNameStr = data.adminName || "Sistema";
+                    const targetStr = data.target || "-";
+                    const detailsStr = data.details || "";
+
+                    if (filterAction && !actionStr.includes(filterAction)) return;
 
                     count++;
                     let dateStr = "Agora mesmo";
-                    if(data.timestamp) {
+                    if(data.timestamp && typeof data.timestamp.toDate === 'function') {
                         const dateObj = data.timestamp.toDate();
                         dateStr = dateObj.toLocaleDateString('pt-BR') + ' às ' + dateObj.toLocaleTimeString('pt-BR').slice(0,5);
                     }
                     
-                    let actionBadge = `<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-bold uppercase">${data.action}</span>`;
-                    if(data.action.includes("Exclusão") || data.action.includes("Remov")) actionBadge = `<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] font-bold uppercase">${data.action}</span>`;
-                    if(data.action.includes("Edição") || data.action.includes("Alter")) actionBadge = `<span class="bg-blue-100 text-blue-600 px-2 py-1 rounded text-[10px] font-bold uppercase">${data.action}</span>`;
-                    if(data.action.includes("Cadastro") || data.action.includes("Criou")) actionBadge = `<span class="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-[10px] font-bold uppercase">${data.action}</span>`;
+                    let actionBadge = `<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-bold uppercase">${actionStr}</span>`;
+                    if(actionStr.includes("Exclusão") || actionStr.includes("Remov")) actionBadge = `<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] font-bold uppercase">${actionStr}</span>`;
+                    else if(actionStr.includes("Edição") || actionStr.includes("Alter")) actionBadge = `<span class="bg-blue-100 text-blue-600 px-2 py-1 rounded text-[10px] font-bold uppercase">${actionStr}</span>`;
+                    else if(actionStr.includes("Cadastro") || actionStr.includes("Criou")) actionBadge = `<span class="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-[10px] font-bold uppercase">${actionStr}</span>`;
+                    else if(actionStr.includes("Ocorrência")) actionBadge = `<span class="bg-orange-100 text-orange-600 px-2 py-1 rounded text-[10px] font-bold uppercase">${actionStr}</span>`;
 
-                    html += `<tr class="border-b hover:bg-gray-50 transition"><td class="p-4 text-xs font-mono text-gray-500">${dateStr}</td><td class="p-4 font-bold text-gray-800">${data.adminName}</td><td class="p-4">${actionBadge}</td><td class="p-4 text-sm text-gray-600"><span class="font-bold text-gray-800">${data.target}</span>: ${data.details}</td></tr>`;
+                    html += `<tr class="border-b hover:bg-gray-50 transition"><td class="p-4 text-xs font-mono text-gray-500">${dateStr}</td><td class="p-4 font-bold text-gray-800">${adminNameStr}</td><td class="p-4">${actionBadge}</td><td class="p-4 text-sm text-gray-600"><span class="font-bold text-gray-800">${targetStr}</span>: ${detailsStr}</td></tr>`;
                 });
                 
                 if (count === 0) tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-400">Nenhum log encontrado para este filtro.</td></tr>';
                 else tbody.innerHTML = html;
-            } catch(e) { console.error(e); tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-400">Erro ao carregar logs.</td></tr>'; }
+            } catch(e) { 
+                console.error("Erro ao carregar auditoria:", e); 
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-400">Erro ao carregar logs. Verifique o console ou as Regras do Firebase.</td></tr>'; 
+            }
         };
         
         window.updateLoginPlaceholder = () => {
             const role = document.getElementById('new-user-role').value; const input = document.getElementById('new-user-login');
-            if (role === 'admin') input.placeholder = "E-mail Corporativo (@dpsp.com.br)"; else input.placeholder = "Matrícula (ex: 12345)";
+            if (role === 'admin' || role === 'master') input.placeholder = "E-mail Corporativo (@dpsp.com.br)"; else input.placeholder = "Matrícula (ex: 12345)";
         };
 
         window.saveBatchMeta = async () => {
@@ -1373,19 +1570,34 @@
                     let setorUsers = usersBySetor[setorName];
                     
                     setorUsers.sort((a, b) => {
-                        if (a.role === 'admin' && b.role !== 'admin') return -1; if (a.role !== 'admin' && b.role === 'admin') return 1;
+                        const weightA = a.role === 'master' || MASTER_EMAILS.includes(a.email) ? 3 : (a.role === 'admin' ? 2 : 1);
+                        const weightB = b.role === 'master' || MASTER_EMAILS.includes(b.email) ? 3 : (b.role === 'admin' ? 2 : 1);
+                        if (weightA !== weightB) return weightB - weightA;
                         if (sortMode === 'date') return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); else return a.nome.localeCompare(b.nome);
                     });
 
                     setorUsers.forEach((u) => {
-                        const isTargetMaster = MASTER_EMAILS.includes(u.email); const metaFormatted = u.meta ? formatNumber(u.meta) : '-';
+                        // NOVO: Adicionado verificação u.role === 'master'
+                        const isTargetMaster = MASTER_EMAILS.includes(u.email) || u.role === 'master'; 
+                        const isHardcodedMaster = MASTER_EMAILS.includes(u.email);
+                        const metaFormatted = u.meta ? formatNumber(u.meta) : '-';
                         let roleBadge = u.role === 'admin' ? '<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold">Gestor</span>' : '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-bold">Colaborador</span>';
                         if (isTargetMaster) roleBadge = '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-bold border border-yellow-200"><i class="fas fa-crown text-[10px]"></i> Super Admin</span>';
                         
                         const setorBadge = `<span class="block text-[10px] text-gray-400 mt-1 font-bold uppercase">Loja: ${u.filial || 'Padrão'} | ${u.setor || DEFAULT_SECTOR}</span>`;
                         const isMe = (u.id === currentUserData.uid); const nameDisplay = isMe ? `${u.nome} <span class="text-green-600 font-bold text-xs ml-1">(Você)</span>` : u.nome;
                         
-                        let deleteBtn = isMe ? `<button class="text-gray-300 border border-gray-100 px-3 py-1 rounded text-xs cursor-not-allowed" title="Você não pode se excluir"><i class="fas fa-ban"></i></button>` : isTargetMaster ? `<button class="text-yellow-400 border border-yellow-100 px-3 py-1 rounded text-xs cursor-not-allowed bg-yellow-50" title="Protegido"><i class="fas fa-shield-alt"></i></button>` : `<button onclick="deleteUser('${u.id}', '${u.nome}', '${u.setor || 'Geral'}', '${u.role}')" class="text-red-500 border border-red-200 px-3 py-1 rounded text-xs hover:bg-red-50" title="Remover"><i class="fas fa-trash"></i></button>`;
+                        let deleteBtn;
+                        if (isMe) {
+                            deleteBtn = `<button class="text-gray-300 border border-gray-100 px-3 py-1 rounded text-xs cursor-not-allowed" title="Você não pode se excluir"><i class="fas fa-ban"></i></button>`;
+                        } else if (isHardcodedMaster) {
+                            deleteBtn = `<button class="text-yellow-400 border border-yellow-100 px-3 py-1 rounded text-xs cursor-not-allowed bg-yellow-50" title="Dono do Sistema"><i class="fas fa-shield-alt"></i></button>`;
+                        } else if (isTargetMaster && !currentUserData.isMaster) {
+                            deleteBtn = `<button class="text-yellow-400 border border-yellow-100 px-3 py-1 rounded text-xs cursor-not-allowed bg-yellow-50" title="Protegido"><i class="fas fa-shield-alt"></i></button>`;
+                        } else {
+                            deleteBtn = `<button onclick="deleteUser('${u.id}', '${u.nome}', '${u.setor || 'Geral'}', '${u.role}')" class="text-red-500 border border-red-200 px-3 py-1 rounded text-xs hover:bg-red-50" title="Remover"><i class="fas fa-trash"></i></button>`;
+                        }
+                        
                         const feedbackBtn = `<button onclick="openFeedbackMode('${u.matricula}')" class="text-emerald-500 border border-emerald-200 px-3 py-1 rounded text-xs hover:bg-emerald-50" title="Feedback"><i class="fas fa-desktop"></i></button>`;
 
                         html += `<tr class="border-b ${isMe ? 'bg-green-50/30' : ''} ${isTargetMaster && !isMe ? 'bg-yellow-50/30' : ''}"><td class="p-4 font-medium flex items-center gap-2">${nameDisplay} ${isTargetMaster ? '<i class="fas fa-check-circle text-blue-500 text-xs"></i>' : ''}</td><td class="p-4 text-gray-500 font-mono text-xs">${u.matricula || u.email} ${setorBadge}</td><td class="p-4">${roleBadge}</td><td class="p-4 text-gray-500">${metaFormatted}</td><td class="p-4 text-right flex justify-end gap-2">${feedbackBtn}<button onclick="openEditUser('${u.id}', '${u.nome}', '${u.matricula}', ${u.meta || 0}, '${u.role}', '${u.setor || DEFAULT_SECTOR}', '${u.filial || 'Padrão'}')" class="text-blue-500 border border-blue-200 px-3 py-1 rounded text-xs hover:bg-blue-50"><i class="fas fa-edit"></i></button>${deleteBtn}</td></tr>`;
@@ -2194,7 +2406,18 @@
                         currentUserData.filial = currentUserData.filial || 'Padrão';
                         
                         const MASTER_EMAILS = ['erlan.santos@dpsp.com.br'];
+                        // Avalia como Master se o email estiver na lista OU a role no banco for master
                         currentUserData.isMaster = MASTER_EMAILS.includes(currentUserData.email) || currentUserData.role === 'master';
+
+                        if (currentUserData.isMaster) {
+                            // Injetar opção Super Admin nos selects de Cadastro e Edição
+                            ['new-user-role', 'edit-role'].forEach(id => {
+                                const select = document.getElementById(id);
+                                if(select && !select.querySelector('option[value="master"]')) {
+                                    select.insertAdjacentHTML('beforeend', '<option value="master">Super Admin</option>');
+                                }
+                            });
+                        }
 
                         document.getElementById('login-screen').classList.add('hidden');
                         document.getElementById('dashboard').classList.remove('hidden');
@@ -2202,7 +2425,7 @@
                         document.getElementById('colaborador-panel').classList.add('hidden');
                         document.getElementById('user-name').innerText = currentUserData.nome;
                         
-                        if(currentUserData.role === 'admin') {
+                        if(currentUserData.role === 'admin' || currentUserData.role === 'master') {
                             document.getElementById('admin-panel').classList.remove('hidden');
                             
                             if (currentUserData.isMaster) {
